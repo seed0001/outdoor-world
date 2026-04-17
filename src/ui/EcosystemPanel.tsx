@@ -107,6 +107,10 @@ export default function EcosystemPanel() {
               <span className="mono">{snap.fauna.rats}</span>
             </div>
             <div className="row">
+              <span>Scorpions</span>
+              <span className="mono">{snap.fauna.scorpions}</span>
+            </div>
+            <div className="row">
               <span>Fish</span>
               <span className="mono">{snap.fauna.fish}</span>
             </div>

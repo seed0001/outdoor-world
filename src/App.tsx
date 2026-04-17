@@ -17,6 +17,7 @@ import Rocks from "./world/Rocks";
 import SnakeDen from "./world/SnakeDen";
 import Snakes from "./world/Snakes";
 import Rats from "./world/Rats";
+import Scorpions from "./world/Scorpions";
 import Fish from "./world/Fish";
 import Butterfly from "./world/Butterfly";
 import Flowers from "./world/Flowers";
@@ -82,6 +83,9 @@ export default function App() {
             </Suspense>
             <Suspense fallback={null}>
               <Rats />
+            </Suspense>
+            <Suspense fallback={null}>
+              <Scorpions />
             </Suspense>
             <Suspense fallback={null}>
               <Fish />
