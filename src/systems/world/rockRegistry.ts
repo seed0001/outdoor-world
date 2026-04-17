@@ -1,4 +1,5 @@
 import { HALF, heightAt, insideLake, mulberry32 } from "../../world/terrain";
+import { nearSnakeDen } from "./snakeDen";
 
 export interface RockSpec {
   id: number;
@@ -26,6 +27,7 @@ function generate(): RockSpec[] {
     const z = (rand() - 0.5) * 2 * (HALF - MARGIN);
     if (Math.hypot(x, z) < MIN_DIST_FROM_SPAWN) continue;
     if (insideLake(x, z, 1.2)) continue;
+    if (nearSnakeDen(x, z, 0)) continue;
     out.push({
       id: out.length,
       x,

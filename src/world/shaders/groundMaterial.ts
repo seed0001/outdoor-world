@@ -19,6 +19,9 @@ export function createGroundMaterial(): {
     vertexColors: true,
     roughness: 1,
     metalness: 0,
+    // Scene fog pushes storm/dusk color onto distant hills; distance fog on
+    // the walkable mesh reads as “missing ground” in heavy weather.
+    fog: false,
   });
   const uniforms: GroundUniforms = {
     uSnowLevel: { value: 0 },

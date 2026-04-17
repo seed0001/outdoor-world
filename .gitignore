@@ -33,3 +33,7 @@ pnpm-debug.log*
 /butterfly/
 /fish/
 /flower/
+/black-rat-free-download/
+
+# Local asset dumps (not used by the app)
+/b-29-superfortress-over-exposed-crash-site/

@@ -42,6 +42,11 @@ export function insideLake(x: number, z: number, buffer = 0): boolean {
   return Math.hypot(dx, dz) < LAKE_OUTER_R + buffer;
 }
 
+/** True when terrain height is below the water surface (flower/tree placement). */
+export function belowLakeWaterLine(x: number, z: number, margin = 0.2): boolean {
+  return heightAt(x, z) < LAKE_WATER_Y + margin;
+}
+
 /** Seeded 32-bit PRNG. Stable across reloads for a given seed. */
 export function mulberry32(seed: number): () => number {
   let s = seed | 0;

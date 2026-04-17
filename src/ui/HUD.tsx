@@ -15,6 +15,7 @@ import { useHealth, health } from "../systems/player/health";
 import { playerRef } from "../systems/player/playerRef";
 import { fireCommand } from "../systems/world/commands";
 import WeatherIcon from "./WeatherIcon";
+import Compass from "./Compass";
 
 function formatClock(dayFrac: number): string {
   const minutes = Math.floor(dayFrac * 24 * 60);
@@ -60,6 +61,8 @@ export default function HUD() {
         style={{ opacity: hitFlash * 0.8 }}
         aria-hidden
       />
+
+      {locked && !hp.dead && <Compass />}
 
       {locked && !hp.dead && (
         <div className="world-readout">

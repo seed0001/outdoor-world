@@ -131,6 +131,81 @@ canvas {
   opacity: 0.6;
 }
 
+.compass {
+  position: fixed;
+  top: 18px;
+  left: 50%;
+  z-index: 11;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.compass-bezel {
+  position: relative;
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  background: rgba(6, 10, 18, 0.48);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(6px);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+}
+
+.compass-rose {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+}
+
+.compass-rose span {
+  position: absolute;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: rgba(230, 238, 255, 0.88);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
+}
+
+.compass-n {
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #f0a8a8;
+}
+
+.compass-e {
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.compass-s {
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  opacity: 0.75;
+}
+
+.compass-w {
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.compass-marker {
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  margin-left: -7px;
+  width: 0;
+  height: 0;
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-bottom: 11px solid rgba(255, 255, 255, 0.88);
+  z-index: 2;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.45));
+}
+
 .world-readout {
   position: fixed;
   top: 18px;
@@ -290,6 +365,18 @@ canvas {
   letter-spacing: 0.06em;
 }
 
+.ecopanel-hint {
+  position: fixed;
+  bottom: 12px;
+  left: 14px;
+  z-index: 40;
+  font-size: 11px;
+  color: rgba(240, 245, 255, 0.55);
+  pointer-events: none;
+  letter-spacing: 0.06em;
+}
+
+.ecopanel-hint kbd,
 .devpanel-hint kbd {
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.18);
@@ -390,4 +477,84 @@ canvas {
   background: rgba(120, 200, 255, 0.2);
   border-color: rgba(120, 200, 255, 0.5);
   color: #dff3ff;
+}
+
+.ecopanel {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 40;
+  width: 320px;
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  background: rgba(12, 16, 24, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  color: #eef3ff;
+  font-size: 12px;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+  pointer-events: auto;
+  backdrop-filter: blur(10px);
+}
+
+.ecopanel header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ecopanel header button {
+  background: transparent;
+  border: none;
+  color: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+.ecopanel section {
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.ecopanel section:last-child {
+  border-bottom: none;
+}
+
+.ecopanel h4 {
+  margin: 0 0 8px 0;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  opacity: 0.6;
+}
+
+.ecopanel .row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 2px 0;
+  font-size: 12px;
+}
+
+.ecopanel .row > span:first-child {
+  opacity: 0.6;
+}
+
+.ecopanel .row.indent {
+  padding-left: 10px;
+  font-size: 11px;
+  opacity: 0.85;
+}
+
+.ecopanel .row.indent > span:first-child {
+  opacity: 0.6;
+}
+
+.ecopanel .row.ecopanel-sub {
+  margin-top: 4px;
+  font-weight: 600;
 }

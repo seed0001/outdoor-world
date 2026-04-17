@@ -1,4 +1,5 @@
 import { HALF, heightAt, insideLake, mulberry32 } from "../../world/terrain";
+import { nearSnakeDen } from "./snakeDen";
 
 export interface TreeSpec {
   id: number;
@@ -29,6 +30,7 @@ function generate(): TreeSpec[] {
     const z = (rand() - 0.5) * 2 * (HALF - MARGIN);
     if (Math.hypot(x, z) < MIN_DIST_FROM_SPAWN) continue;
     if (insideLake(x, z, LAKE_SHORE_BUFFER)) continue;
+    if (nearSnakeDen(x, z, 0)) continue;
     const scale = 0.8 + rand() * 0.9;
     const trunkHeight = 1.6 * scale;
     const foliageHeight = (2.2 + rand() * 1.2) * scale;

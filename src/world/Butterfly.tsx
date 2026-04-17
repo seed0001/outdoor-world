@@ -10,7 +10,7 @@ import {
 import { heightAt, mulberry32 } from "./terrain";
 import { snapshot } from "../systems/world/worldClock";
 import { getWeather } from "../systems/weather/weatherSystem";
-import { foliageLevel, temperatureC } from "../systems/world/calendar";
+import { computeButterflyVisibility } from "../systems/world/butterflyVisibility";
 
 const MODEL_URL = "/models/butterfly.glb";
 
@@ -44,7 +44,8 @@ export default function Butterfly() {
     box.getSize(size);
     const longest = Math.max(size.x, size.y, size.z);
     if (longest < 0.001) return 1;
-    return 0.12 / longest;
+    // ~0.38 m wingspan — readable at walking distance (0.12 m was near-invisible).
+    return 0.38 / longest;
   }, [gltf.scene]);
 
   return (
@@ -86,11 +87,8 @@ function OneButterfly({ spec, template, clips, baseScale }: OneProps) {
     idle: THREE.AnimationAction | null;
     transition: THREE.AnimationAction | null;
   }>({ hover: null, idle: null, transition: null });
-  const materialsRef = useRef<THREE.Material[]>([]);
-
   const instance = useMemo(() => {
     const cloned = SkeletonUtils.clone(template);
-    const mats: THREE.Material[] = [];
     cloned.traverse((obj) => {
       const mesh = obj as THREE.Mesh;
       if (mesh.isMesh) {
@@ -99,26 +97,17 @@ function OneButterfly({ spec, template, clips, baseScale }: OneProps) {
         mesh.frustumCulled = false; // skinned bounds don't follow motion well
         if (mesh.material) {
           const src = mesh.material as THREE.Material | THREE.Material[];
-          if (Array.isArray(src)) {
-            mesh.material = src.map((m) => prepMaterial(m));
-            (mesh.material as THREE.Material[]).forEach((m) => mats.push(m));
-          } else {
-            mesh.material = prepMaterial(src);
-            mats.push(mesh.material);
-          }
+          if (Array.isArray(src)) src.forEach(fixButterflyMaterial);
+          else fixButterflyMaterial(src);
         }
       }
     });
-    return { cloned, mats };
+    return cloned;
   }, [template]);
 
   useEffect(() => {
-    materialsRef.current = instance.mats;
-  }, [instance]);
-
-  useEffect(() => {
     if (clips.length === 0) return;
-    const mixer = new THREE.AnimationMixer(instance.cloned);
+    const mixer = new THREE.AnimationMixer(instance);
     mixerRef.current = mixer;
 
     const hoverClip = clips.find((c) => c.name === "hover") ?? clips[0];
@@ -153,7 +142,7 @@ function OneButterfly({ spec, template, clips, baseScale }: OneProps) {
 
     return () => {
       mixer.stopAllAction();
-      mixer.uncacheRoot(instance.cloned);
+      mixer.uncacheRoot(instance);
       mixerRef.current = null;
       actionsRef.current = { hover: null, idle: null, transition: null };
     };
@@ -176,53 +165,24 @@ function OneButterfly({ spec, template, clips, baseScale }: OneProps) {
     const now = performance.now() / 1000;
     const world = snapshot();
     const weather = getWeather();
-    const temp = temperatureC(world, 0, weather.tempMod);
 
-    /* ---------- visibility gating ---------- */
+    /* ---------- visibility (shared with ecosystem HUD) ---------- */
 
-    // Midday = 1, night = 0. Butterflies only fly when the sun is up.
-    const sunAlt = Math.sin((world.dayFrac - 0.25) * Math.PI * 2);
-    const dayFactor = THREE.MathUtils.clamp(sunAlt * 3 - 0.3, 0, 1);
+    const vis = computeButterflyVisibility(world, weather);
+    const visibilityTarget = vis.combined;
 
-    // Seasonal activity. foliageLevel already tracks the leaf calendar:
-    // bare-winter = 0, spring/summer/early-autumn = 1.
-    const seasonFactor = foliageLevel(world.yearFrac);
-
-    // Cold snap kills the butterflies too, even in shoulder seasons.
-    const tempFactor = THREE.MathUtils.clamp((temp - 4) / 8, 0, 1);
-
-    // Hostile weather: butterflies hide.
-    const weatherHostile =
-      weather.type === "rain" ||
-      weather.type === "hail" ||
-      weather.type === "thunderstorm" ||
-      weather.type === "snow" ||
-      weather.type === "blizzard" ||
-      weather.type === "tornado";
-    const weatherFactor = weatherHostile
-      ? Math.max(0, 1 - weather.intensity * 2.5)
-      : 1 - weather.cloudDarkness * 0.3;
-
-    const visibilityTarget =
-      dayFactor * seasonFactor * tempFactor * weatherFactor;
-
-    // Ease opacity — fast fade out (scared by weather), slower fade in.
-    const easeRate = visibilityTarget > opacityRef.current ? 0.6 : 2.4;
+    // Ease toward target for smooth dusk / weather fronts (no material
+    // opacity — transparent skinned meshes were rendering invisible in Rapier).
+    const easeRate = visibilityTarget > opacityRef.current ? 0.85 : 2.2;
     opacityRef.current +=
       (visibilityTarget - opacityRef.current) * Math.min(1, dt * easeRate);
 
     const op = opacityRef.current;
-    if (op < 0.01) {
+    if (op < 0.02) {
       group.visible = false;
       return;
     }
     group.visible = true;
-
-    // Apply opacity to all shared-cloned materials.
-    const mats = materialsRef.current;
-    for (let i = 0; i < mats.length; i++) {
-      mats[i].opacity = op;
-    }
 
     /* ---------- state machine ---------- */
 
@@ -343,7 +303,7 @@ function OneButterfly({ spec, template, clips, baseScale }: OneProps) {
 
   return (
     <group ref={groupRef} scale={baseScale * spec.scale}>
-      <primitive object={instance.cloned} />
+      <primitive object={instance} />
     </group>
   );
 }
@@ -429,12 +389,58 @@ function playTransition(
   t.play();
 }
 
-function prepMaterial(src: THREE.Material): THREE.Material {
-  const m = src.clone();
-  m.transparent = true;
-  m.depthWrite = true; // still write depth so foliage doesn't overdraw badly
-  m.opacity = 0;
-  return m;
+/**
+ * In-place fixes on materials already cloned by `SkeletonUtils.clone`.
+ * Avoid a second `material.clone()` — it breaks GLTF texture wiring for this
+ * asset (KHR_materials_pbrSpecularGlossiness), which reads as flat grey.
+ */
+function fixButterflyMaterial(m: THREE.Material): void {
+  m.needsUpdate = true;
+  m.depthWrite = true;
+
+  if (m instanceof THREE.MeshPhysicalMaterial) {
+    m.transmission = 0;
+    m.thickness = 0;
+    m.attenuationDistance = Infinity;
+    m.ior = 1.5;
+  }
+
+  if (m instanceof THREE.MeshStandardMaterial) {
+    const setTex = (tex: THREE.Texture | null | undefined, cs: THREE.ColorSpace) => {
+      if (tex) {
+        tex.colorSpace = cs;
+        tex.needsUpdate = true;
+      }
+    };
+    setTex(m.map, THREE.SRGBColorSpace);
+    setTex(m.emissiveMap, THREE.SRGBColorSpace);
+    setTex(m.normalMap, THREE.LinearSRGBColorSpace);
+    setTex(m.metalnessMap, THREE.LinearSRGBColorSpace);
+    setTex(m.roughnessMap, THREE.LinearSRGBColorSpace);
+    setTex(m.aoMap, THREE.LinearSRGBColorSpace);
+    setTex(m.alphaMap, THREE.LinearSRGBColorSpace);
+    if (m.map) m.map.anisotropy = Math.max(m.map.anisotropy, 8);
+
+    // Spec/gloss → metal/rough often yields shiny metal with no HDR env → grey.
+    if (m.metalness > 0.6) m.metalness = Math.min(m.metalness, 0.25);
+    if (m.roughness < 0.35) m.roughness = Math.max(m.roughness, 0.55);
+    m.envMapIntensity = Math.min(m.envMapIntensity ?? 1, 0.85);
+
+    const wantsBlend =
+      m.transparent ||
+      m.opacity < 0.999 ||
+      m.alphaMap != null ||
+      (m.map != null && m.map.format === THREE.RGBAFormat);
+
+    if (wantsBlend) {
+      m.alphaTest = 0.35;
+      m.transparent = false;
+      m.opacity = 1;
+    } else {
+      m.transparent = false;
+      m.opacity = 1;
+    }
+  }
 }
 
 /** Cheap deterministic sin-noise: returns roughly -1..1. */

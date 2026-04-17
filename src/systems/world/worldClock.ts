@@ -73,8 +73,23 @@ function parseInitialSeason(): number {
   return n >= 0 ? n * SEASON_REAL_MS : 0;
 }
 
+/** April 20, mid-morning — used as the default calendar start (HUD day = ⌊monthProgress·30⌋+1). */
+export function getDefaultStartSimMs(): number {
+  const yearFracApril20 = (3 + 19.5 / 30) / 12;
+  return yearFracApril20 * YEAR_REAL_MS + DAY_REAL_MS * 0.3;
+}
+
+function parseInitialSimMs(): number {
+  const params = new URLSearchParams(window.location.search);
+  // URL season jump overrides the April 20 default.
+  if (params.get("season") !== null) {
+    return parseInitialSeason() + DAY_REAL_MS * 0.3;
+  }
+  return getDefaultStartSimMs();
+}
+
 timeScale = parseInitialScale();
-simMs = parseInitialSeason() + DAY_REAL_MS * 0.3; // start mid-morning
+simMs = parseInitialSimMs();
 
 function emitState() {
   stateListeners.forEach((l) => l());
@@ -169,7 +184,7 @@ export function jumpToSeason(s: SeasonIndex) {
 }
 
 export function resetWorldClock() {
-  simMs = 0;
+  simMs = getDefaultStartSimMs();
   emitState();
 }
 

@@ -1,39 +1,44 @@
-import { HALF, heightAt, insideLake, mulberry32 } from "../../world/terrain";
+import { heightAt, mulberry32 } from "../../world/terrain";
+import { SNAKE_DEN_X, SNAKE_DEN_Z } from "./snakeDen";
 
 export interface SnakeSpec {
   id: number;
-  x: number;
-  y: number;
-  z: number;
-  rot: number;
+  /** Burrow spot under the rock pile (slight offset per snake). */
+  denX: number;
+  denZ: number;
+  denY: number;
+  /** How far this individual wanders from the den (metres). */
+  patrolRadius: number;
   scale: number;
   animPhase: number;
   animSpeed: number;
+  /** Desynchronises emerge / patrol timers between snakes. */
+  timerOffset: number;
 }
 
 const SNAKE_COUNT = 5;
 const SNAKE_SEED = 4207;
-const MIN_DIST_FROM_SPAWN = 8;
-const MARGIN = 6;
 
 function generate(): SnakeSpec[] {
   const rand = mulberry32(SNAKE_SEED);
   const out: SnakeSpec[] = [];
-  let guard = 0;
-  while (out.length < SNAKE_COUNT && guard++ < SNAKE_COUNT * 20) {
-    const x = (rand() - 0.5) * 2 * (HALF - MARGIN);
-    const z = (rand() - 0.5) * 2 * (HALF - MARGIN);
-    if (Math.hypot(x, z) < MIN_DIST_FROM_SPAWN) continue;
-    if (insideLake(x, z, 2.5)) continue;
+
+  for (let i = 0; i < SNAKE_COUNT; i++) {
+    const ang = rand() * Math.PI * 2;
+    const r = rand() * 0.75;
+    const x = SNAKE_DEN_X + Math.cos(ang) * r;
+    const z = SNAKE_DEN_Z + Math.sin(ang) * r;
+
     out.push({
-      id: out.length,
-      x,
-      y: heightAt(x, z),
-      z,
-      rot: rand() * Math.PI * 2,
+      id: i,
+      denX: x,
+      denZ: z,
+      denY: heightAt(x, z),
+      patrolRadius: 6 + rand() * 5,
       scale: 0.9 + rand() * 0.4,
       animPhase: rand(),
       animSpeed: 0.7 + rand() * 0.5,
+      timerOffset: rand() * 40,
     });
   }
   return out;

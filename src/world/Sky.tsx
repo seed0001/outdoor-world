@@ -153,11 +153,15 @@ export default function Sky() {
         workColor.copy(NIGHT_FOG).lerp(DUSK_FOG, k);
       }
       if (cloudDarkness > 0) {
-        workColor.lerp(STORM_FOG, cloudDarkness * 0.6);
+        // Keep lerp moderate so terrain does not match fog and read as "missing".
+        workColor.lerp(STORM_FOG, cloudDarkness * 0.45);
       }
       fog.color.copy(workColor);
-      fog.near = 50 - cloudCoverage * 15;
-      fog.far = 180 - cloudCoverage * 80;
+      const cc = THREE.MathUtils.clamp(cloudCoverage, 0, 1);
+      // Earlier: far = 180 - cc*80 (down to ~100) fully washed out the ground in storms.
+      // Pull near in gently and widen far so mid-field terrain stays readable.
+      fog.near = 50 - cc * 11;
+      fog.far = fog.near + THREE.MathUtils.lerp(130, 145, cc);
     }
   });
 

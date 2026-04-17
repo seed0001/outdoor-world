@@ -1,4 +1,10 @@
-import { HALF, heightAt, insideLake, mulberry32 } from "../../world/terrain";
+import {
+  HALF,
+  heightAt,
+  belowLakeWaterLine,
+  insideLake,
+  mulberry32,
+} from "../../world/terrain";
 import { butterflies } from "./butterflyRegistry";
 
 export interface FlowerSpec {
@@ -21,7 +27,8 @@ interface Cluster {
   count: number;
 }
 
-const FLOWER_SEED = 76541;
+/** Bump seed when placement rules change so clusters reshuffle. */
+const FLOWER_SEED = 76542;
 const MARGIN = 6;
 const MIN_DIST_FROM_SPAWN = 5;
 const CLUSTER_COUNT = 12;
@@ -39,7 +46,8 @@ function generate(): FlowerSpec[] {
     const z = (rand() - 0.5) * 2 * (HALF - MARGIN);
     if (Math.hypot(x, z) < MIN_DIST_FROM_SPAWN) continue;
     const radius = MIN_CLUSTER_RADIUS + rand() * (MAX_CLUSTER_RADIUS - MIN_CLUSTER_RADIUS);
-    if (insideLake(x, z, radius + 1)) continue;
+    // Whole cluster disk must clear the lake bowl + shore (not just the anchor).
+    if (insideLake(x, z, radius + 3.5)) continue;
     clusters.push({ x, z, radius, count: 8 + Math.floor(rand() * 9) });
   }
 
@@ -49,7 +57,7 @@ function generate(): FlowerSpec[] {
   let bonusPlaced = 0;
   for (const b of butterflies) {
     if (bonusPlaced >= 2) break;
-    if (insideLake(b.restX, b.restZ, 2)) continue;
+    if (insideLake(b.restX, b.restZ, 4)) continue;
     const tooClose = clusters.some(
       (c) => Math.hypot(c.x - b.restX, c.z - b.restZ) < 6,
     );
@@ -68,11 +76,21 @@ function generate(): FlowerSpec[] {
   const out: FlowerSpec[] = [];
   clusters.forEach((c, ci) => {
     for (let i = 0; i < c.count; i++) {
-      const a = rand() * Math.PI * 2;
-      const r = Math.sqrt(rand()) * c.radius;
-      const x = c.x + Math.cos(a) * r;
-      const z = c.z + Math.sin(a) * r;
-      if (insideLake(x, z, 0.5)) continue;
+      let x = 0;
+      let z = 0;
+      let ok = false;
+      for (let attempt = 0; attempt < 18 && !ok; attempt++) {
+        const a = rand() * Math.PI * 2;
+        const r = Math.sqrt(rand()) * c.radius;
+        x = c.x + Math.cos(a) * r;
+        z = c.z + Math.sin(a) * r;
+        // Wide lake margin: the bowl extends past the nominal rim; also reject
+        // anything whose terrain sits under the water surface.
+        if (insideLake(x, z, 3)) continue;
+        if (belowLakeWaterLine(x, z, 0.28)) continue;
+        ok = true;
+      }
+      if (!ok) continue;
       out.push({
         id: out.length,
         x,

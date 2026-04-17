@@ -62,6 +62,21 @@ export function foliageLevel(yearFrac: number): number {
   return 0; // winter bare
 }
 
+/**
+ * 0..1 — pollinators active from early spring through mid-autumn, independent
+ * of tree foliage. `foliageLevel` stays 0 in deep winter while leaves are
+ * bare; butterflies still need a warm window, so we drive them from the
+ * annual phase instead of leaf cover (otherwise they vanish whenever trees
+ * are bare, including game start in January).
+ */
+export function butterflyActivity(yearFrac: number): number {
+  const p = yearPhase(yearFrac);
+  if (p < 0.08) return smoothstep(0.02, 0.08, p);
+  if (p < 0.55) return 1;
+  if (p < 0.72) return 1 - smoothstep(0.55, 0.72, p);
+  return 0;
+}
+
 /** 0..1 color-tone through the year. 0=spring-green,0.3=deep-green,0.55=yellow,0.65=orange,0.72=bare */
 export function foliageHuePhase(yearFrac: number, perTreeOffset = 0): number {
   const p = yearPhase(yearFrac) + perTreeOffset;

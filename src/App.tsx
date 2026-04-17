@@ -13,7 +13,9 @@ import Sky from "./world/Sky";
 import Ground from "./world/Ground";
 import Trees from "./world/Trees";
 import Rocks from "./world/Rocks";
+import SnakeDen from "./world/SnakeDen";
 import Snakes from "./world/Snakes";
+import Rats from "./world/Rats";
 import Fish from "./world/Fish";
 import Butterfly from "./world/Butterfly";
 import Flowers from "./world/Flowers";
@@ -23,8 +25,10 @@ import Precipitation from "./world/Precipitation";
 import Lightning from "./world/Lightning";
 import Tornado from "./world/Tornado";
 import Player from "./player/Player";
+import HeadingSync from "./player/HeadingSync";
 import HUD from "./ui/HUD";
 import DevPanel from "./ui/DevPanel";
+import EcosystemPanel from "./ui/EcosystemPanel";
 import { controlsMap } from "./player/usePlayerControls";
 
 // Initialise systems that self-register via side effects.
@@ -45,16 +49,19 @@ export default function App() {
           <Suspense fallback={null}>
             <Sky />
             <Clouds />
+            <Butterfly />
             <Physics gravity={[0, -22, 0]} debug={debug}>
               <Ground />
               <Lake />
+              <SnakeDen />
               <Trees />
               <Rocks />
               <Snakes />
+              <Rats />
               <Fish />
-              <Butterfly />
               <Flowers />
               <Player />
+              <HeadingSync />
               <Tornado />
             </Physics>
             <Precipitation />
@@ -69,6 +76,7 @@ export default function App() {
       </KeyboardControls>
       <HUD />
       <DevPanel />
+      <EcosystemPanel />
     </>
   );
 }
