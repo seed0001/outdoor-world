@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+.vite/
+
+# TypeScript incremental build artifacts
+*.tsbuildinfo
+
+# Editor / OS
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# Raw asset sources — the runtime-ready copies live in public/models/.
+# These folders hold duplicates, archives, and loose texture dumps that the
+# app doesn't need.
+/butterfly/
+/fish/
+/flower/
