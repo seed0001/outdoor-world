@@ -4,6 +4,7 @@ import {
   worldState,
   type PlacedLogPayload,
 } from "../systems/world/worldState";
+import { logMeshColor } from "../systems/world/woodEcology";
 
 export default function Logs() {
   const [logs, setLogs] = useState<PlacedLogPayload[]>(() =>
@@ -43,7 +44,10 @@ function PlacedLog({ log }: { log: PlacedLogPayload }) {
         <boxGeometry
           args={[halfLength * 2, halfThickness * 2, halfThickness * 2]}
         />
-        <meshStandardMaterial color="#5c3a1a" roughness={0.92} />
+        <meshStandardMaterial
+          color={logMeshColor(log.treeKind)}
+          roughness={0.92}
+        />
       </mesh>
     </RigidBody>
   );

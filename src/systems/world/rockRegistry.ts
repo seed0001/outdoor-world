@@ -1,5 +1,6 @@
 import { HALF, heightAt, insideLake, mulberry32 } from "../../world/terrain";
 import { nearSnakeDen } from "./snakeDen";
+import { mineralVeinFromRockId, type MineralKind } from "./mineralRegistry";
 
 export interface RockSpec {
   id: number;
@@ -11,11 +12,13 @@ export interface RockSpec {
   ry: number;
   rz: number;
   shade: number;
+  /** Dominant mineral when this rock is broken into pickups. */
+  mineralVein: MineralKind;
 }
 
 const ROCK_COUNT = 45;
 const MIN_DIST_FROM_SPAWN = 4;
-const ROCK_SEED = 7331;
+const ROCK_SEED = 7332;
 const MARGIN = 2;
 
 function generate(): RockSpec[] {
@@ -28,8 +31,9 @@ function generate(): RockSpec[] {
     if (Math.hypot(x, z) < MIN_DIST_FROM_SPAWN) continue;
     if (insideLake(x, z, 1.2)) continue;
     if (nearSnakeDen(x, z, 0)) continue;
+    const id = out.length;
     out.push({
-      id: out.length,
+      id,
       x,
       y: heightAt(x, z),
       z,
@@ -38,6 +42,7 @@ function generate(): RockSpec[] {
       ry: rand() * Math.PI * 2,
       rz: rand() * Math.PI * 2,
       shade: 0.65 + rand() * 0.35,
+      mineralVein: mineralVeinFromRockId(id),
     });
   }
   return out;

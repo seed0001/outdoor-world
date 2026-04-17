@@ -15,6 +15,11 @@ import { useHealth, health } from "../systems/player/health";
 import { playerRef } from "../systems/player/playerRef";
 import { useInventory } from "../systems/player/inventory";
 import {
+  MINERAL_INVENTORY_KEYS,
+  MINERAL_NAMES,
+  type MineralInventoryKey,
+} from "../systems/world/mineralRegistry";
+import {
   isBackpackOpen,
   setBackpackOpen,
   subscribeBackpack,
@@ -27,6 +32,8 @@ import Compass from "./Compass";
 
 /** Put your sticks artwork at `public/images/inventory/sticks-bundle.png`. */
 const STICKS_ICON_URL = "/images/inventory/sticks-bundle.png";
+
+const MINERAL_ABBREV = ["Fe", "Cu", "Qz", "S", "Na"] as const;
 
 function BackpackStickCell({ qty }: { qty: number }) {
   const [imgOk, setImgOk] = useState(true);
@@ -164,8 +171,13 @@ export default function HUD() {
       )}
 
       {locked && !hp.dead && !backpackOpen && (
-        <div className="backpack-hint" aria-hidden>
-          <kbd>I</kbd> backpack
+        <div className="backpack-hint backpack-hint--col" aria-hidden>
+          <div>
+            <kbd>I</kbd> backpack
+          </div>
+          <div>
+            <kbd>T</kbd> tree info on/off
+          </div>
         </div>
       )}
 
@@ -188,26 +200,50 @@ export default function HUD() {
                 const row = Math.floor(i / 12);
                 const isStick = row === 0 && col === 0;
                 const isStone = row === 0 && col === 1;
-                const reserved = isStick || isStone;
-                const qty = isStick ? inv.stick : isStone ? inv.stone : 0;
+                const mineralIndex =
+                  row === 0 &&
+                  col >= 2 &&
+                  col < 2 + MINERAL_INVENTORY_KEYS.length
+                    ? col - 2
+                    : -1;
+                const mineralKey: MineralInventoryKey | null =
+                  mineralIndex >= 0
+                    ? MINERAL_INVENTORY_KEYS[mineralIndex]
+                    : null;
+                const reserved = isStick || isStone || mineralKey !== null;
+                const qty = isStick
+                  ? inv.stick
+                  : isStone
+                    ? inv.stone
+                    : mineralKey
+                      ? inv[mineralKey]
+                      : 0;
                 const filled = reserved && qty > 0;
+                const title = isStick
+                  ? "Sticks"
+                  : isStone
+                    ? "Stone"
+                    : mineralKey
+                      ? MINERAL_NAMES[mineralIndex]
+                      : `Slot ${row + 1},${col + 1}`;
                 return (
                   <div
                     key={i}
                     className={`backpack-cell${reserved ? " backpack-cell--reserved" : ""}${filled ? " backpack-cell--filled" : ""}`}
-                    title={
-                      isStick
-                        ? "Sticks"
-                        : isStone
-                          ? "Stone"
-                          : `Slot ${row + 1},${col + 1}`
-                    }
+                    title={title}
                   >
                     {isStick ? (
                       <BackpackStickCell qty={qty} />
                     ) : isStone ? (
                       <>
                         <span className="backpack-cell__name">Stn</span>
+                        <span className="backpack-cell__qty mono">{qty}</span>
+                      </>
+                    ) : mineralKey && mineralIndex >= 0 ? (
+                      <>
+                        <span className="backpack-cell__name">
+                          {MINERAL_ABBREV[mineralIndex]}
+                        </span>
                         <span className="backpack-cell__qty mono">{qty}</span>
                       </>
                     ) : null}
@@ -294,6 +330,10 @@ export default function HUD() {
             <kbd>I</kbd>
           </span>
           <span>backpack</span>
+          <span>
+            <kbd>T</kbd>
+          </span>
+          <span>tree info on/off</span>
           <span>
             <kbd>Esc</kbd>
           </span>

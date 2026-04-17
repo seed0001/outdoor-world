@@ -127,8 +127,8 @@ export default function HeldAxe() {
     playerRef.axeSwing = Math.max(0, playerRef.axeSwing - dt * 2.2);
     const s = swingRef.current;
 
-    // s=0 raised; s=1 strike — increase pitch so the blade comes down (top-down chop).
-    euler.set(0.38 + s * 1.15, -0.26 - s * 0.2, 0.08);
+    // s=0 raised; s=1 strike — pitch away from the camera (chop outward, not into the face).
+    euler.set(0.38 - s * 1.15, -0.26 - s * 0.2, 0.08);
     swingQ.setFromEuler(euler);
 
     camera.getWorldQuaternion(rig.quaternion);
@@ -152,14 +152,11 @@ export default function HeldAxe() {
             AXE_ORIENTATION_RAD[2],
           ]}
         >
-          {/* 180° on the axe mesh only; chop swing is unchanged on the parent rig. */}
-          <group rotation={[0, Math.PI, 0]}>
-            <Suspense fallback={<ProceduralAxe />}>
-              <AxeLoadErrorBoundary>
-                <AxeModel />
-              </AxeLoadErrorBoundary>
-            </Suspense>
-          </group>
+          <Suspense fallback={<ProceduralAxe />}>
+            <AxeLoadErrorBoundary>
+              <AxeModel />
+            </AxeLoadErrorBoundary>
+          </Suspense>
         </group>
       </group>
     </group>

@@ -431,6 +431,7 @@ export default function Tornado() {
         const speedScale = (1 - d / DESTROY_R) * 90 + 40;
         worldState.fellTree({
           id: t.id,
+          kind: t.kind,
           position: [t.x, t.y, t.z],
           trunkHeight: t.trunkHeight,
           trunkRadius: t.trunkRadius,

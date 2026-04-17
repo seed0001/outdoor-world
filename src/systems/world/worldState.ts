@@ -1,7 +1,10 @@
 import * as THREE from "three";
+import type { TreeKind } from "./treeRegistry";
+import type { MineralKind } from "./mineralRegistry";
 
 export interface FallenTreePayload {
   id: number;
+  kind: TreeKind;
   position: [number, number, number];
   trunkHeight: number;
   trunkRadius: number;
@@ -28,12 +31,16 @@ export interface PlacedLogPayload {
   rotation: [number, number, number];
   halfLength: number;
   halfThickness: number;
+  /** Species — drives `woodEcology` traits when the log is processed or split. */
+  treeKind: TreeKind;
 }
 
 export interface StonePickupPayload {
   id: number;
   position: [number, number, number];
   stones: number;
+  /** Extra yields from the rock’s mineral vein (see `rockRegistry`). */
+  minerals: Partial<Record<MineralKind, number>>;
 }
 
 const fallenTrees = new Map<number, FallenTreePayload>();
@@ -75,22 +82,36 @@ export const worldState = {
     emit();
   },
   /** Fallen tornado tree removed and replaced by a log at `position`. */
-  convertFallenTreeToLog(treeId: number, position: [number, number, number], logRest: Omit<PlacedLogPayload, "id" | "position">) {
-    if (!fallenTrees.has(treeId)) return;
+  convertFallenTreeToLog(treeId: number, position: [number, number, number], logRest: Omit<PlacedLogPayload, "id" | "position" | "treeKind">) {
+    const fallen = fallenTrees.get(treeId);
+    if (!fallen) return;
     fallenTrees.delete(treeId);
     const id = nextLogId++;
-    placedLogs.set(id, { id, position, ...logRest });
+    placedLogs.set(id, { id, position, ...logRest, treeKind: fallen.kind });
     emit();
   },
   removePlacedLog(logId: number) {
     if (!placedLogs.delete(logId)) return;
     emit();
   },
-  addStonePickupsAround(origin: [number, number, number], count: number, spread: number) {
+  addStonePickupsAround(
+    origin: [number, number, number],
+    count: number,
+    spread: number,
+    opts?: { mineralVein?: MineralKind },
+  ) {
     for (let i = 0; i < count; i++) {
       const a = Math.random() * Math.PI * 2;
       const r = 0.15 + Math.random() * spread;
       const id = nextPickupId++;
+      const stones = 1 + Math.floor(Math.random() * 2);
+      const minerals: Partial<Record<MineralKind, number>> = {};
+      const vein = opts?.mineralVein;
+      if (vein !== undefined) {
+        const n = 1 + Math.floor(Math.random() * 2);
+        const bonus = Math.random() < 0.38 ? 1 : 0;
+        minerals[vein] = n + bonus;
+      }
       stonePickups.set(id, {
         id,
         position: [
@@ -98,7 +119,8 @@ export const worldState = {
           origin[1] + 0.25,
           origin[2] + Math.sin(a) * r,
         ],
-        stones: 1 + Math.floor(Math.random() * 2),
+        stones,
+        minerals,
       });
     }
     emit();

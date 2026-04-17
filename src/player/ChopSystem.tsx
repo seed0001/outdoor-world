@@ -6,8 +6,11 @@ import type { Collider } from "@dimforge/rapier3d-compat";
 import { playerRef, addCameraShake } from "../systems/player/playerRef";
 import { health } from "../systems/player/health";
 import { inventory } from "../systems/player/inventory";
+import { snapshot } from "../systems/world/worldClock";
 import { worldState } from "../systems/world/worldState";
+import { computeWoodHarvestTraits } from "../systems/world/woodEcology";
 import { trees as treeList } from "../systems/world/treeRegistry";
+import { getWeather } from "../systems/weather/weatherSystem";
 import { rocks as rockList } from "../systems/world/rockRegistry";
 import { isBackpackOpen } from "../systems/ui/backpackState";
 import { playWoodChopSfx } from "../systems/audio/gameAudio";
@@ -132,6 +135,7 @@ export default function ChopSystem() {
           rotation: [0, t.rot, 0],
           halfLength: hl,
           halfThickness: ht,
+          treeKind: t.kind,
         });
       }
       return;
@@ -165,8 +169,19 @@ export default function ChopSystem() {
       addCameraShake(0.07);
       if (n >= LOG_HITS) {
         logChops.current.delete(logId);
+        const logPayload = worldState.listPlacedLogs().find((l) => l.id === logId);
         worldState.removePlacedLog(logId);
-        inventory.add("stick", 4 + Math.floor(Math.random() * 3));
+        const w = getWeather();
+        const traits = logPayload
+          ? computeWoodHarvestTraits(logPayload.treeKind, snapshot(), {
+              elevation: playerRef.position.y,
+              weatherTempMod: w.tempMod,
+            })
+          : null;
+        let sticks = 4 + Math.floor(Math.random() * 3);
+        if (traits && traits.refinement > 0.78) sticks += 1;
+        if (traits && traits.freshness > 0.88) sticks += 1;
+        inventory.add("stick", Math.min(sticks, 12));
       }
       return;
     }
@@ -204,6 +219,7 @@ export default function ChopSystem() {
             [spec.x, spec.y + 0.2, spec.z],
             4,
             0.55,
+            { mineralVein: spec.mineralVein },
           );
         }
         return;
@@ -223,7 +239,12 @@ export default function ChopSystem() {
           dynamicRockChops.current.delete(rockId);
           const tr = parent.translation();
           worldState.removeDisplacedRock(rockId);
-          worldState.addStonePickupsAround([tr.x, tr.y + 0.1, tr.z], 3, 0.45);
+          worldState.addStonePickupsAround(
+            [tr.x, tr.y + 0.1, tr.z],
+            3,
+            0.45,
+            spec ? { mineralVein: spec.mineralVein } : undefined,
+          );
         }
       }
     }

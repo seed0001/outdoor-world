@@ -124,19 +124,6 @@ export default function Player() {
     }
     lastYVel.current = v.y;
 
-    if (!locked) {
-      rb.setLinvel({ x: 0, y: v.y, z: 0 }, true);
-      applyCamera(camera, pos, shakeOffset, state.clock.elapsedTime);
-      updateWalkingFoley({
-        locked: false,
-        grounded,
-        dead: false,
-        horizSpeed: 0,
-        wantsMove: false,
-      });
-      return;
-    }
-
     const s = getControls();
 
     camera.getWorldDirection(forward);

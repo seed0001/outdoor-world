@@ -1,7 +1,21 @@
 import { useEffect, useRef, useState } from "react";
+import * as THREE from "three";
 import { BallCollider, RigidBody, type RapierRigidBody } from "@react-three/rapier";
 import { rocks as rockList, type RockSpec } from "../systems/world/rockRegistry";
+import { mineralSampleColor } from "../systems/world/mineralRegistry";
 import { worldState, type DisplacedRockPayload } from "../systems/world/worldState";
+
+function rockMeshColor(spec: RockSpec): string {
+  const s = spec.shade;
+  const base = new THREE.Color(
+    (150 * s) / 255,
+    (145 * s) / 255,
+    (135 * s) / 255,
+  );
+  const tint = new THREE.Color(mineralSampleColor(spec.mineralVein));
+  base.lerp(tint, 0.2);
+  return `#${base.getHexString()}`;
+}
 
 export default function Rocks() {
   const [displacedIds, setDisplacedIds] = useState<Set<number>>(new Set());
@@ -34,9 +48,7 @@ export default function Rocks() {
 
 function StaticRock({ spec }: { spec: RockSpec }) {
   const radius = spec.scale;
-  const color = `rgb(${Math.round(150 * spec.shade)}, ${Math.round(
-    145 * spec.shade,
-  )}, ${Math.round(135 * spec.shade)})`;
+  const color = rockMeshColor(spec);
   return (
     <RigidBody
       type="fixed"
@@ -55,6 +67,7 @@ function StaticRock({ spec }: { spec: RockSpec }) {
 }
 
 function DynamicRock({ payload }: { payload: DisplacedRockPayload }) {
+  const spec = rockList.find((r) => r.id === payload.id);
   const bodyRef = useRef<RapierRigidBody>(null);
   const appliedRef = useRef(false);
   useEffect(() => {
@@ -79,6 +92,7 @@ function DynamicRock({ payload }: { payload: DisplacedRockPayload }) {
     );
   }, [payload]);
   const radius = payload.scale[0];
+  const color = spec ? rockMeshColor(spec) : "#8a8274";
   return (
     <RigidBody
       ref={bodyRef}
@@ -92,7 +106,7 @@ function DynamicRock({ payload }: { payload: DisplacedRockPayload }) {
       <BallCollider args={[radius * 0.8]} />
       <mesh castShadow receiveShadow>
         <icosahedronGeometry args={[radius, 0]} />
-        <meshStandardMaterial color="#8a8274" roughness={1} flatShading />
+        <meshStandardMaterial color={color} roughness={1} flatShading />
       </mesh>
     </RigidBody>
   );

@@ -28,10 +28,13 @@ import Tornado from "./world/Tornado";
 import Player from "./player/Player";
 import HeldAxe from "./player/HeldAxe";
 import ChopSystem from "./player/ChopSystem";
+import TreeInspectRay from "./player/TreeInspectRay";
 import HeadingSync from "./player/HeadingSync";
 import Logs from "./world/Logs";
 import StonePickups from "./world/StonePickups";
+import WorldBounds from "./world/WorldBounds";
 import HUD from "./ui/HUD";
+import TreeInspectPopup from "./ui/TreeInspectPopup";
 import DevPanel from "./ui/DevPanel";
 import EcosystemPanel from "./ui/EcosystemPanel";
 import { controlsMap } from "./player/usePlayerControls";
@@ -46,7 +49,8 @@ export default function App() {
   useEffect(() => {
     const up = () => unlockGameAudio();
     window.addEventListener("pointerdown", up, { capture: true, once: true });
-    return () => window.removeEventListener("pointerdown", up, { capture: true });
+    return () =>
+      window.removeEventListener("pointerdown", up, { capture: true });
   }, []);
 
   return (
@@ -66,6 +70,7 @@ export default function App() {
             <Butterfly />
           </Suspense>
           <Physics gravity={[0, -22, 0]} debug={debug}>
+            <WorldBounds />
             <Ground />
             <Lake />
             <SnakeDen />
@@ -88,6 +93,7 @@ export default function App() {
             <Player />
             <HeldAxe />
             <ChopSystem />
+            <TreeInspectRay />
             <HeadingSync />
             <Tornado />
           </Physics>
@@ -104,6 +110,7 @@ export default function App() {
       </KeyboardControls>
       <Loader />
       <HUD />
+      <TreeInspectPopup />
       <DevPanel />
       <EcosystemPanel />
     </>

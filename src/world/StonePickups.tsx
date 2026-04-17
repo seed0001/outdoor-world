@@ -6,6 +6,11 @@ import {
 } from "../systems/world/worldState";
 import { playerRef } from "../systems/player/playerRef";
 import { inventory } from "../systems/player/inventory";
+import {
+  MINERAL_KINDS,
+  mineralKindToKey,
+  mineralSampleColor,
+} from "../systems/world/mineralRegistry";
 
 const PICKUP_R2 = 1.45 * 1.45;
 
@@ -31,6 +36,12 @@ export default function StonePickups() {
       const dz = p.position[2] - pz;
       if (dx * dx + dy * dy + dz * dz <= PICKUP_R2) {
         inventory.add("stone", p.stones);
+        for (const kind of MINERAL_KINDS) {
+          const n = p.minerals[kind];
+          if (n && n > 0) {
+            inventory.add(mineralKindToKey(kind), n);
+          }
+        }
         collected.push(p.id);
       }
     }
@@ -39,17 +50,32 @@ export default function StonePickups() {
 
   return (
     <group>
-      {pickups.map((p) => (
-        <mesh
-          key={`stone-${p.id}`}
-          position={p.position}
-          castShadow
-          receiveShadow
-        >
-          <dodecahedronGeometry args={[0.14, 0]} />
-          <meshStandardMaterial color="#9a9488" roughness={0.9} flatShading />
-        </mesh>
-      ))}
+      {pickups.map((p) => {
+        let tint = "#9a9488";
+        for (const kind of MINERAL_KINDS) {
+          const n = p.minerals[kind];
+          if (n && n > 0) {
+            tint = mineralSampleColor(kind);
+            break;
+          }
+        }
+        return (
+          <mesh
+            key={`stone-${p.id}`}
+            position={p.position}
+            castShadow
+            receiveShadow
+          >
+            <dodecahedronGeometry args={[0.14, 0]} />
+            <meshStandardMaterial
+              color={tint}
+              roughness={0.88}
+              flatShading
+              metalness={0.12}
+            />
+          </mesh>
+        );
+      })}
     </group>
   );
 }

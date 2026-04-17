@@ -7,9 +7,64 @@ import { snapshot } from "../systems/world/worldClock";
 import { yearPhase } from "../systems/world/calendar";
 import { getWeather } from "../systems/weather/weatherSystem";
 import { worldState, type FallenTreePayload } from "../systems/world/worldState";
-import { trees as treeList, type TreeSpec } from "../systems/world/treeRegistry";
+import {
+  trees as treeList,
+  type TreeKind,
+  type TreeSpec,
+} from "../systems/world/treeRegistry";
 
 const HIDDEN_MATRIX = new THREE.Matrix4().makeScale(0, 0, 0);
+
+const TRUNK_COLORS = ["#4a2b14", "#2d1a0c", "#c8b8a8", "#3d2818"] as const;
+
+/** One instanced batch per kind — built once from the static registry. */
+const treeBuckets: TreeSpec[][] = [[], [], [], []];
+for (const t of treeList) {
+  treeBuckets[t.kind].push(t);
+}
+
+const treeIdToSlot = new Map<
+  number,
+  { kind: TreeKind; index: number }
+>();
+for (let k = 0; k < 4; k++) {
+  const kind = k as TreeKind;
+  treeBuckets[kind].forEach((t, i) => {
+    treeIdToSlot.set(t.id, { kind, index: i });
+  });
+}
+
+function makeFoliageGeometry(kind: TreeKind, bucket: TreeSpec[]): THREE.BufferGeometry {
+  let g: THREE.BufferGeometry;
+  if (kind === 3) {
+    g = new THREE.IcosahedronGeometry(1, 1);
+  } else if (kind === 1) {
+    g = new THREE.ConeGeometry(1, 1, 10);
+  } else {
+    g = new THREE.ConeGeometry(1, 1, 8);
+  }
+  const phaseArr = new Float32Array(bucket.length);
+  for (let i = 0; i < bucket.length; i++) phaseArr[i] = bucket[i].phase;
+  g.setAttribute(
+    "aPhase",
+    new THREE.InstancedBufferAttribute(phaseArr, 1),
+  );
+  return g;
+}
+
+const TRUNK_GEOM: THREE.BufferGeometry[] = [
+  new THREE.CylinderGeometry(0.18, 0.28, 1, 8),
+  new THREE.CylinderGeometry(0.12, 0.17, 1, 8),
+  new THREE.CylinderGeometry(0.09, 0.13, 1, 8),
+  new THREE.CylinderGeometry(0.16, 0.24, 1, 8),
+];
+
+const FOLIAGE_GEOM: THREE.BufferGeometry[] = [
+  makeFoliageGeometry(0, treeBuckets[0]),
+  makeFoliageGeometry(1, treeBuckets[1]),
+  makeFoliageGeometry(2, treeBuckets[2]),
+  makeFoliageGeometry(3, treeBuckets[3]),
+];
 
 function writeTrunkMatrix(t: TreeSpec, into: THREE.Object3D) {
   into.position.set(t.x, t.y + t.trunkHeight / 2, t.z);
@@ -30,32 +85,29 @@ function writeFoliageMatrix(t: TreeSpec, into: THREE.Object3D) {
 }
 
 export default function Trees() {
-  const trunkMeshRef = useRef<THREE.InstancedMesh>(null);
-  const foliageMeshRef = useRef<THREE.InstancedMesh>(null);
+  const trunkRef0 = useRef<THREE.InstancedMesh>(null);
+  const trunkRef1 = useRef<THREE.InstancedMesh>(null);
+  const trunkRef2 = useRef<THREE.InstancedMesh>(null);
+  const trunkRef3 = useRef<THREE.InstancedMesh>(null);
+  const foliageRef0 = useRef<THREE.InstancedMesh>(null);
+  const foliageRef1 = useRef<THREE.InstancedMesh>(null);
+  const foliageRef2 = useRef<THREE.InstancedMesh>(null);
+  const foliageRef3 = useRef<THREE.InstancedMesh>(null);
 
-  const trunkGeom = useMemo(
-    () => new THREE.CylinderGeometry(0.18, 0.28, 1, 8),
-    [],
-  );
-  const trunkMat = useMemo(
+  const trunkRefs = [trunkRef0, trunkRef1, trunkRef2, trunkRef3];
+  const foliageRefs = [foliageRef0, foliageRef1, foliageRef2, foliageRef3];
+
+  const trunkMats = useMemo(
     () =>
-      new THREE.MeshStandardMaterial({
-        color: "#4a2b14",
-        roughness: 0.95,
-      }),
+      TRUNK_COLORS.map(
+        (c) =>
+          new THREE.MeshStandardMaterial({
+            color: c,
+            roughness: 0.95,
+          }),
+      ),
     [],
   );
-
-  const foliageGeom = useMemo(() => {
-    const g = new THREE.ConeGeometry(1, 1, 8);
-    const phaseArr = new Float32Array(treeList.length);
-    for (let i = 0; i < treeList.length; i++) phaseArr[i] = treeList[i].phase;
-    g.setAttribute(
-      "aPhase",
-      new THREE.InstancedBufferAttribute(phaseArr, 1),
-    );
-    return g;
-  }, []);
 
   const { material: foliageMat, uniforms } = useMemo(
     () => createFoliageMaterial(),
@@ -82,38 +134,46 @@ export default function Trees() {
     return worldState.subscribe(sync);
   }, []);
 
-  // Rebuild instance matrices when tree set changes.
   useEffect(() => {
-    const trunks = trunkMeshRef.current;
-    const foliage = foliageMeshRef.current;
-    if (!trunks || !foliage) return;
     const dummy = new THREE.Object3D();
-    for (let i = 0; i < treeList.length; i++) {
-      const t = treeList[i];
-      if (standingHiddenIds.has(treeList[i].id)) {
-        trunks.setMatrixAt(i, HIDDEN_MATRIX);
-        foliage.setMatrixAt(i, HIDDEN_MATRIX);
+    for (const t of treeList) {
+      const slot = treeIdToSlot.get(t.id);
+      if (!slot) continue;
+      const tr = trunkRefs[slot.kind].current;
+      const fo = foliageRefs[slot.kind].current;
+      if (!tr || !fo) continue;
+      if (standingHiddenIds.has(t.id)) {
+        tr.setMatrixAt(slot.index, HIDDEN_MATRIX);
+        fo.setMatrixAt(slot.index, HIDDEN_MATRIX);
       } else {
         writeTrunkMatrix(t, dummy);
-        trunks.setMatrixAt(i, dummy.matrix);
+        tr.setMatrixAt(slot.index, dummy.matrix);
         writeFoliageMatrix(t, dummy);
-        foliage.setMatrixAt(i, dummy.matrix);
+        fo.setMatrixAt(slot.index, dummy.matrix);
       }
     }
-    trunks.instanceMatrix.needsUpdate = true;
-    foliage.instanceMatrix.needsUpdate = true;
-    trunks.computeBoundingSphere();
-    foliage.computeBoundingSphere();
+    for (let k = 0; k < 4; k++) {
+      const tr = trunkRefs[k].current;
+      const fo = foliageRefs[k].current;
+      if (tr) {
+        tr.instanceMatrix.needsUpdate = true;
+        tr.computeBoundingSphere();
+      }
+      if (fo) {
+        fo.instanceMatrix.needsUpdate = true;
+        fo.computeBoundingSphere();
+      }
+    }
   }, [standingHiddenIds]);
 
   useEffect(
     () => () => {
-      trunkGeom.dispose();
-      foliageGeom.dispose();
-      trunkMat.dispose();
+      TRUNK_GEOM.forEach((g) => g.dispose());
+      FOLIAGE_GEOM.forEach((g) => g.dispose());
+      trunkMats.forEach((m) => m.dispose());
       foliageMat.dispose();
     },
-    [trunkGeom, foliageGeom, trunkMat, foliageMat],
+    [trunkMats, foliageMat],
   );
 
   useFrame((_, dt) => {
@@ -128,18 +188,26 @@ export default function Trees() {
 
   return (
     <group>
-      <instancedMesh
-        ref={trunkMeshRef}
-        args={[trunkGeom, trunkMat, treeList.length]}
-        castShadow
-        receiveShadow
-      />
-      <instancedMesh
-        ref={foliageMeshRef}
-        args={[foliageGeom, foliageMat, treeList.length]}
-        castShadow
-        receiveShadow
-      />
+      {[0, 1, 2, 3].map((k) => {
+        const n = treeBuckets[k].length;
+        if (n === 0) return null;
+        return (
+          <group key={k}>
+            <instancedMesh
+              ref={trunkRefs[k]}
+              args={[TRUNK_GEOM[k], trunkMats[k], n]}
+              castShadow
+              receiveShadow
+            />
+            <instancedMesh
+              ref={foliageRefs[k]}
+              args={[FOLIAGE_GEOM[k], foliageMat, n]}
+              castShadow
+              receiveShadow
+            />
+          </group>
+        );
+      })}
 
       {treeList.map((t) => {
         if (standingHiddenIds.has(t.id)) return null;
@@ -192,6 +260,10 @@ function FallenTree({ payload }: { payload: FallenTreePayload }) {
   }, [payload]);
 
   const totalHeight = payload.trunkHeight + payload.foliageHeight;
+  const k = payload.kind;
+  const trunkColor = TRUNK_COLORS[k] ?? TRUNK_COLORS[0];
+  const foliageColor = "#4a5d2b";
+
   return (
     <RigidBody
       ref={bodyRef}
@@ -212,17 +284,41 @@ function FallenTree({ payload }: { payload: FallenTreePayload }) {
       <group>
         <mesh castShadow receiveShadow position={[0, -payload.foliageHeight / 2, 0]}>
           <cylinderGeometry
-            args={[payload.trunkRadius * 0.7, payload.trunkRadius, payload.trunkHeight, 8]}
+            args={[
+              payload.trunkRadius * 0.7,
+              payload.trunkRadius,
+              payload.trunkHeight,
+              8,
+            ]}
           />
-          <meshStandardMaterial color="#4a2b14" roughness={0.95} />
+          <meshStandardMaterial color={trunkColor} roughness={0.95} />
         </mesh>
         <mesh
           castShadow
           receiveShadow
           position={[0, payload.trunkHeight / 2, 0]}
+          scale={
+            k === 3
+              ? [
+                  payload.foliageRadius,
+                  payload.foliageHeight * 0.48,
+                  payload.foliageRadius,
+                ]
+              : [1, 1, 1]
+          }
         >
-          <coneGeometry args={[payload.foliageRadius, payload.foliageHeight, 8]} />
-          <meshStandardMaterial color="#4a5d2b" roughness={1} />
+          {k === 3 ? (
+            <icosahedronGeometry args={[1, 1]} />
+          ) : (
+            <coneGeometry
+              args={[
+                payload.foliageRadius,
+                payload.foliageHeight,
+                k === 1 ? 10 : 8,
+              ]}
+            />
+          )}
+          <meshStandardMaterial color={foliageColor} roughness={1} />
         </mesh>
       </group>
     </RigidBody>
