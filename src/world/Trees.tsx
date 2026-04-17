@@ -62,7 +62,9 @@ export default function Trees() {
     [],
   );
 
-  const [fallenIds, setFallenIds] = useState<Set<number>>(new Set());
+  const [standingHiddenIds, setStandingHiddenIds] = useState<Set<number>>(
+    new Set(),
+  );
   const [fallenPayloads, setFallenPayloads] = useState<FallenTreePayload[]>(
     [],
   );
@@ -71,7 +73,10 @@ export default function Trees() {
     const sync = () => {
       const payloads = worldState.listFallenTrees();
       setFallenPayloads(payloads);
-      setFallenIds(new Set(payloads.map((p) => p.id)));
+      const hidden = new Set<number>();
+      for (const p of payloads) hidden.add(p.id);
+      for (const id of worldState.listTreesHarvestedToLog()) hidden.add(id);
+      setStandingHiddenIds(hidden);
     };
     sync();
     return worldState.subscribe(sync);
@@ -85,7 +90,7 @@ export default function Trees() {
     const dummy = new THREE.Object3D();
     for (let i = 0; i < treeList.length; i++) {
       const t = treeList[i];
-      if (fallenIds.has(i)) {
+      if (standingHiddenIds.has(treeList[i].id)) {
         trunks.setMatrixAt(i, HIDDEN_MATRIX);
         foliage.setMatrixAt(i, HIDDEN_MATRIX);
       } else {
@@ -99,7 +104,7 @@ export default function Trees() {
     foliage.instanceMatrix.needsUpdate = true;
     trunks.computeBoundingSphere();
     foliage.computeBoundingSphere();
-  }, [fallenIds]);
+  }, [standingHiddenIds]);
 
   useEffect(
     () => () => {
@@ -137,7 +142,7 @@ export default function Trees() {
       />
 
       {treeList.map((t) => {
-        if (fallenIds.has(t.id)) return null;
+        if (standingHiddenIds.has(t.id)) return null;
         return (
           <RigidBody
             key={`col-${t.id}`}
@@ -199,6 +204,7 @@ function FallenTree({ payload }: { payload: FallenTreePayload }) {
       ]}
       linearDamping={0.3}
       angularDamping={0.3}
+      userData={{ kind: "fallenTree", id: payload.id }}
     >
       <CylinderCollider
         args={[totalHeight / 2, Math.max(payload.trunkRadius, 0.4)]}

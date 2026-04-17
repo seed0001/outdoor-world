@@ -1,9 +1,10 @@
-import { Suspense } from "react";
+import { Suspense, useEffect } from "react";
 import { Canvas } from "@react-three/fiber";
 import {
   AdaptiveDpr,
   AdaptiveEvents,
   KeyboardControls,
+  Loader,
   PointerLockControls,
   Stats,
 } from "@react-three/drei";
@@ -25,7 +26,11 @@ import Precipitation from "./world/Precipitation";
 import Lightning from "./world/Lightning";
 import Tornado from "./world/Tornado";
 import Player from "./player/Player";
+import HeldAxe from "./player/HeldAxe";
+import ChopSystem from "./player/ChopSystem";
 import HeadingSync from "./player/HeadingSync";
+import Logs from "./world/Logs";
+import StonePickups from "./world/StonePickups";
 import HUD from "./ui/HUD";
 import DevPanel from "./ui/DevPanel";
 import EcosystemPanel from "./ui/EcosystemPanel";
@@ -33,10 +38,17 @@ import { controlsMap } from "./player/usePlayerControls";
 
 // Initialise systems that self-register via side effects.
 import "./systems/world/groundState";
+import { unlockGameAudio } from "./systems/audio/gameAudio";
 
 const debug = new URLSearchParams(window.location.search).has("debug");
 
 export default function App() {
+  useEffect(() => {
+    const up = () => unlockGameAudio();
+    window.addEventListener("pointerdown", up, { capture: true, once: true });
+    return () => window.removeEventListener("pointerdown", up, { capture: true });
+  }, []);
+
   return (
     <>
       <KeyboardControls map={controlsMap}>
@@ -49,21 +61,37 @@ export default function App() {
           <Suspense fallback={null}>
             <Sky />
             <Clouds />
+          </Suspense>
+          <Suspense fallback={null}>
             <Butterfly />
-            <Physics gravity={[0, -22, 0]} debug={debug}>
-              <Ground />
-              <Lake />
-              <SnakeDen />
-              <Trees />
-              <Rocks />
+          </Suspense>
+          <Physics gravity={[0, -22, 0]} debug={debug}>
+            <Ground />
+            <Lake />
+            <SnakeDen />
+            <Trees />
+            <Logs />
+            <Rocks />
+            <Suspense fallback={null}>
               <Snakes />
+            </Suspense>
+            <Suspense fallback={null}>
               <Rats />
+            </Suspense>
+            <Suspense fallback={null}>
               <Fish />
+            </Suspense>
+            <Suspense fallback={null}>
               <Flowers />
-              <Player />
-              <HeadingSync />
-              <Tornado />
-            </Physics>
+            </Suspense>
+            <StonePickups />
+            <Player />
+            <HeldAxe />
+            <ChopSystem />
+            <HeadingSync />
+            <Tornado />
+          </Physics>
+          <Suspense fallback={null}>
             <Precipitation />
             <Lightning />
           </Suspense>
@@ -74,6 +102,7 @@ export default function App() {
           {debug && <Stats />}
         </Canvas>
       </KeyboardControls>
+      <Loader />
       <HUD />
       <DevPanel />
       <EcosystemPanel />

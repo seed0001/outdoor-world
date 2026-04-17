@@ -13,6 +13,8 @@ interface PlayerRef {
    * to XZ; world +Z is north on the HUD compass.
    */
   heading: number;
+  /** 0–1 axe swing visual; ChopSystem sets, HeldAxe reads. */
+  axeSwing: number;
 }
 
 export const playerRef: PlayerRef = {
@@ -21,6 +23,7 @@ export const playerRef: PlayerRef = {
   shake: 0,
   position: new THREE.Vector3(),
   heading: 0,
+  axeSwing: 0,
 };
 
 export function addCameraShake(amount: number) {

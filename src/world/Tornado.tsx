@@ -411,6 +411,10 @@ export default function Tornado() {
     const DESTROY_R = RADIUS_LIFT;
     for (const t of treeList) {
       if (felledTrees.current.has(t.id)) continue;
+      if (worldState.isTreeHarvestedToLog(t.id)) {
+        felledTrees.current.add(t.id);
+        continue;
+      }
       if (worldState.isTreeFallen(t.id)) {
         felledTrees.current.add(t.id);
         continue;

@@ -3,6 +3,7 @@ import { MONTHS, useWorldTime } from "../systems/world/worldClock";
 import { subscribeWeather } from "../systems/weather/weatherSystem";
 import { worldState } from "../systems/world/worldState";
 import { getEcosystemSnapshot } from "../systems/world/ecosystemStats";
+import { releasePointerLockForUI } from "../systems/ui/pointerLock";
 
 export default function EcosystemPanel() {
   const [open, setOpen] = useState(false);
@@ -22,9 +23,13 @@ export default function EcosystemPanel() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.code === "F2") {
+      if (e.code === "F3") {
         e.preventDefault();
-        setOpen((o) => !o);
+        setOpen((o) => {
+          const next = !o;
+          if (next) releasePointerLockForUI();
+          return next;
+        });
       }
     };
     window.addEventListener("keydown", onKey);
@@ -40,7 +45,7 @@ export default function EcosystemPanel() {
   return (
     <>
       <div className="ecopanel-hint">
-        <kbd>F2</kbd> ecosystem
+        <kbd>F3</kbd> ecosystem
       </div>
       {open && (
         <div className="ecopanel">

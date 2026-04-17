@@ -21,8 +21,29 @@ export interface DisplacedRockPayload {
   spawnSimMs: number;
 }
 
+/** Player-felled standing tree → world log (instanced tree hidden). */
+export interface PlacedLogPayload {
+  id: number;
+  position: [number, number, number];
+  rotation: [number, number, number];
+  halfLength: number;
+  halfThickness: number;
+}
+
+export interface StonePickupPayload {
+  id: number;
+  position: [number, number, number];
+  stones: number;
+}
+
 const fallenTrees = new Map<number, FallenTreePayload>();
 const displacedRocks = new Map<number, DisplacedRockPayload>();
+/** Standing trees removed for a placed log. */
+const treesHarvestedToLog = new Set<number>();
+const placedLogs = new Map<number, PlacedLogPayload>();
+const stonePickups = new Map<number, StonePickupPayload>();
+let nextLogId = 1;
+let nextPickupId = 1;
 const listeners = new Set<() => void>();
 
 function emit() {
@@ -32,6 +53,7 @@ function emit() {
 export const worldState = {
   fellTree(p: FallenTreePayload) {
     if (fallenTrees.has(p.id)) return;
+    if (treesHarvestedToLog.has(p.id)) return;
     fallenTrees.set(p.id, p);
     emit();
   },
@@ -40,8 +62,60 @@ export const worldState = {
     displacedRocks.set(p.id, p);
     emit();
   },
+  removeFallenTree(id: number) {
+    if (!fallenTrees.delete(id)) return;
+    emit();
+  },
+  /** Standing tree → log; hides instanced tree + collider. */
+  harvestStandingTreeToLog(treeId: number, log: Omit<PlacedLogPayload, "id">) {
+    if (treesHarvestedToLog.has(treeId)) return;
+    treesHarvestedToLog.add(treeId);
+    const id = nextLogId++;
+    placedLogs.set(id, { id, ...log });
+    emit();
+  },
+  /** Fallen tornado tree removed and replaced by a log at `position`. */
+  convertFallenTreeToLog(treeId: number, position: [number, number, number], logRest: Omit<PlacedLogPayload, "id" | "position">) {
+    if (!fallenTrees.has(treeId)) return;
+    fallenTrees.delete(treeId);
+    const id = nextLogId++;
+    placedLogs.set(id, { id, position, ...logRest });
+    emit();
+  },
+  removePlacedLog(logId: number) {
+    if (!placedLogs.delete(logId)) return;
+    emit();
+  },
+  addStonePickupsAround(origin: [number, number, number], count: number, spread: number) {
+    for (let i = 0; i < count; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const r = 0.15 + Math.random() * spread;
+      const id = nextPickupId++;
+      stonePickups.set(id, {
+        id,
+        position: [
+          origin[0] + Math.cos(a) * r,
+          origin[1] + 0.25,
+          origin[2] + Math.sin(a) * r,
+        ],
+        stones: 1 + Math.floor(Math.random() * 2),
+      });
+    }
+    emit();
+  },
+  removeStonePickup(id: number) {
+    if (!stonePickups.delete(id)) return;
+    emit();
+  },
+  removeDisplacedRock(rockId: number) {
+    if (!displacedRocks.delete(rockId)) return;
+    emit();
+  },
   isTreeFallen(id: number) {
     return fallenTrees.has(id);
+  },
+  isTreeHarvestedToLog(id: number) {
+    return treesHarvestedToLog.has(id);
   },
   isRockDisplaced(id: number) {
     return displacedRocks.has(id);
@@ -52,9 +126,23 @@ export const worldState = {
   listDisplacedRocks(): DisplacedRockPayload[] {
     return Array.from(displacedRocks.values());
   },
+  listPlacedLogs(): PlacedLogPayload[] {
+    return Array.from(placedLogs.values());
+  },
+  listStonePickups(): StonePickupPayload[] {
+    return Array.from(stonePickups.values());
+  },
+  listTreesHarvestedToLog(): number[] {
+    return Array.from(treesHarvestedToLog);
+  },
   reset() {
     fallenTrees.clear();
     displacedRocks.clear();
+    treesHarvestedToLog.clear();
+    placedLogs.clear();
+    stonePickups.clear();
+    nextLogId = 1;
+    nextPickupId = 1;
     emit();
   },
   subscribe(cb: () => void): () => void {

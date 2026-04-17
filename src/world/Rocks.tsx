@@ -87,6 +87,7 @@ function DynamicRock({ payload }: { payload: DisplacedRockPayload }) {
       position={payload.position}
       linearDamping={0.4}
       angularDamping={0.4}
+      userData={{ kind: "rock", id: payload.id }}
     >
       <BallCollider args={[radius * 0.8]} />
       <mesh castShadow receiveShadow>

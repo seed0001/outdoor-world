@@ -26,7 +26,9 @@ import {
 import { fireCommand } from "../systems/world/commands";
 import { worldState } from "../systems/world/worldState";
 import { health, useHealth } from "../systems/player/health";
+import { inventory } from "../systems/player/inventory";
 import { playerRef } from "../systems/player/playerRef";
+import { releasePointerLockForUI } from "../systems/ui/pointerLock";
 
 const SCALES: { label: string; value: number }[] = [
   { label: "Pause", value: 0 },
@@ -71,7 +73,11 @@ export default function DevPanel() {
     const onKey = (e: KeyboardEvent) => {
       if (e.code === "F1" || e.key === "`") {
         e.preventDefault();
-        setOpen((o) => !o);
+        setOpen((o) => {
+          const next = !o;
+          if (next) releasePointerLockForUI();
+          return next;
+        });
       }
     };
     window.addEventListener("keydown", onKey);
@@ -236,6 +242,7 @@ export default function DevPanel() {
             type="button"
             onClick={() => {
               worldState.reset();
+              inventory.reset();
               fireCommand("world:reset");
             }}
           >

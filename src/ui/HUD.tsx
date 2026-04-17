@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useWorldTime } from "../systems/world/worldClock";
 import {
   monthName,
@@ -13,9 +13,40 @@ import {
 } from "../systems/weather/weatherSystem";
 import { useHealth, health } from "../systems/player/health";
 import { playerRef } from "../systems/player/playerRef";
+import { useInventory } from "../systems/player/inventory";
+import {
+  isBackpackOpen,
+  setBackpackOpen,
+  subscribeBackpack,
+} from "../systems/ui/backpackState";
 import { fireCommand } from "../systems/world/commands";
+import { playBagZipSfx } from "../systems/audio/gameAudio";
+import { releasePointerLockForUI } from "../systems/ui/pointerLock";
 import WeatherIcon from "./WeatherIcon";
 import Compass from "./Compass";
+
+/** Put your sticks artwork at `public/images/inventory/sticks-bundle.png`. */
+const STICKS_ICON_URL = "/images/inventory/sticks-bundle.png";
+
+function BackpackStickCell({ qty }: { qty: number }) {
+  const [imgOk, setImgOk] = useState(true);
+  return (
+    <>
+      {imgOk ? (
+        <img
+          className="backpack-cell__icon"
+          src={STICKS_ICON_URL}
+          alt=""
+          draggable={false}
+          onError={() => setImgOk(false)}
+        />
+      ) : (
+        <span className="backpack-cell__name">Stk</span>
+      )}
+      <span className="backpack-cell__qty mono">{qty}</span>
+    </>
+  );
+}
 
 function formatClock(dayFrac: number): string {
   const minutes = Math.floor(dayFrac * 24 * 60);
@@ -28,6 +59,9 @@ export default function HUD() {
   const [locked, setLocked] = useState(false);
   const world = useWorldTime(4);
   const hp = useHealth();
+  const inv = useInventory();
+  const [backpackOpen, setBackpackOpenState] = useState(isBackpackOpen);
+  const prevBackpackOpen = useRef<boolean | undefined>(undefined);
   const [weatherTick, setWeatherTick] = useState(0);
 
   useEffect(() => {
@@ -40,6 +74,49 @@ export default function HUD() {
     const unsub = subscribeWeather(() => setWeatherTick((n) => n + 1));
     return unsub;
   }, []);
+
+  useEffect(() => {
+    return subscribeBackpack(() => setBackpackOpenState(isBackpackOpen()));
+  }, []);
+
+  useEffect(() => {
+    if (hp.dead) setBackpackOpen(false);
+  }, [hp.dead]);
+
+  useEffect(() => {
+    if (hp.dead) releasePointerLockForUI();
+  }, [hp.dead]);
+
+  useEffect(() => {
+    if (prevBackpackOpen.current === undefined) {
+      prevBackpackOpen.current = backpackOpen;
+      return;
+    }
+    if (prevBackpackOpen.current !== backpackOpen) {
+      playBagZipSfx();
+      prevBackpackOpen.current = backpackOpen;
+    }
+  }, [backpackOpen]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (hp.dead) return;
+      if (e.code === "KeyI") {
+        if (e.repeat) return;
+        e.preventDefault();
+        const next = !isBackpackOpen();
+        setBackpackOpen(next);
+        if (next) releasePointerLockForUI();
+        return;
+      }
+      if (e.code === "Escape" && isBackpackOpen()) {
+        e.preventDefault();
+        setBackpackOpen(false);
+      }
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [hp.dead]);
 
   const weather = getWeather();
   void weatherTick;
@@ -54,7 +131,9 @@ export default function HUD() {
 
   return (
     <div className="hud">
-      {locked && <div className="crosshair" aria-hidden />}
+      {locked && !backpackOpen && !hp.dead && (
+        <div className="crosshair" aria-hidden />
+      )}
 
       <div
         className="damage-vignette"
@@ -62,9 +141,9 @@ export default function HUD() {
         aria-hidden
       />
 
-      {locked && !hp.dead && <Compass />}
+      {locked && !hp.dead && !backpackOpen && <Compass />}
 
-      {locked && !hp.dead && (
+      {locked && !hp.dead && !backpackOpen && (
         <div className="world-readout">
           <div className="line">
             <span className="mono">{formatClock(world.dayFrac)}</span>
@@ -81,6 +160,65 @@ export default function HUD() {
             <span>{WEATHER_LABELS[weather.type]}</span>
             {weather.windStrength > 0.8 && <span className="wind">wind</span>}
           </div>
+        </div>
+      )}
+
+      {locked && !hp.dead && !backpackOpen && (
+        <div className="backpack-hint" aria-hidden>
+          <kbd>I</kbd> backpack
+        </div>
+      )}
+
+      {backpackOpen && !hp.dead && (
+        <div className="backpack" role="dialog" aria-label="Backpack">
+          <header>
+            <strong>Backpack</strong>
+            <button
+              type="button"
+              onClick={() => setBackpackOpen(false)}
+              aria-label="Close backpack"
+            >
+              ×
+            </button>
+          </header>
+          <section className="backpack-section">
+            <div className="backpack-grid" aria-label="Inventory grid">
+              {Array.from({ length: 144 }, (_, i) => {
+                const col = i % 12;
+                const row = Math.floor(i / 12);
+                const isStick = row === 0 && col === 0;
+                const isStone = row === 0 && col === 1;
+                const reserved = isStick || isStone;
+                const qty = isStick ? inv.stick : isStone ? inv.stone : 0;
+                const filled = reserved && qty > 0;
+                return (
+                  <div
+                    key={i}
+                    className={`backpack-cell${reserved ? " backpack-cell--reserved" : ""}${filled ? " backpack-cell--filled" : ""}`}
+                    title={
+                      isStick
+                        ? "Sticks"
+                        : isStone
+                          ? "Stone"
+                          : `Slot ${row + 1},${col + 1}`
+                    }
+                  >
+                    {isStick ? (
+                      <BackpackStickCell qty={qty} />
+                    ) : isStone ? (
+                      <>
+                        <span className="backpack-cell__name">Stn</span>
+                        <span className="backpack-cell__qty mono">{qty}</span>
+                      </>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+          <footer className="backpack-footer muted">
+            Press <kbd>I</kbd> or <kbd>Esc</kbd> to close
+          </footer>
         </div>
       )}
 
@@ -141,9 +279,21 @@ export default function HUD() {
           </span>
           <span>look around</span>
           <span>
+            <kbd>LMB</kbd>
+          </span>
+          <span>chop / gather</span>
+          <span>
             <kbd>F1</kbd>
           </span>
           <span>dev panel</span>
+          <span>
+            <kbd>F3</kbd>
+          </span>
+          <span>ecosystem</span>
+          <span>
+            <kbd>I</kbd>
+          </span>
+          <span>backpack</span>
           <span>
             <kbd>Esc</kbd>
           </span>

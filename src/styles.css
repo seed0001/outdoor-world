@@ -259,6 +259,163 @@ canvas {
   letter-spacing: 0.02em;
 }
 
+.backpack-hint {
+  position: fixed;
+  bottom: 48px;
+  left: 20px;
+  z-index: 11;
+  font-size: 11px;
+  color: rgba(232, 236, 248, 0.75);
+  pointer-events: none;
+  letter-spacing: 0.04em;
+}
+
+.backpack-hint kbd {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 3px;
+  padding: 0 5px;
+  font-family: ui-monospace, monospace;
+  font-size: 10px;
+  margin-right: 4px;
+}
+
+.backpack {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 45;
+  width: min(520px, calc(100vw - 24px));
+  max-height: min(90vh, 640px);
+  display: flex;
+  flex-direction: column;
+  background: rgba(14, 18, 28, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 12px;
+  color: #eef3ff;
+  font-size: 13px;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.55);
+  pointer-events: auto;
+  backdrop-filter: blur(12px);
+}
+
+.backpack header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.backpack header strong {
+  font-size: 15px;
+  letter-spacing: 0.04em;
+}
+
+.backpack header button {
+  background: transparent;
+  border: none;
+  color: inherit;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px 10px;
+  opacity: 0.75;
+}
+
+.backpack header button:hover {
+  opacity: 1;
+}
+
+.backpack-section {
+  padding: 10px 12px 8px;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.backpack-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  grid-template-rows: repeat(12, 1fr);
+  gap: 3px;
+  width: 100%;
+  aspect-ratio: 1;
+  max-height: min(72vw, 72vh, 480px);
+}
+
+.backpack-cell {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.28);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1px;
+  font-size: 8px;
+  line-height: 1.1;
+  text-align: center;
+  overflow: hidden;
+}
+
+.backpack-cell--reserved {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.backpack-cell--filled {
+  background: rgba(70, 120, 200, 0.18);
+  border-color: rgba(120, 170, 255, 0.35);
+}
+
+.backpack-cell__name {
+  opacity: 0.85;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.backpack-cell__icon {
+  width: 100%;
+  height: 55%;
+  max-height: 42px;
+  object-fit: contain;
+  object-position: center;
+  user-select: none;
+  pointer-events: none;
+}
+
+.backpack-cell__qty {
+  font-size: 11px;
+  font-weight: 700;
+  margin-top: 1px;
+}
+
+.backpack-footer {
+  padding: 10px 16px 14px;
+  font-size: 11px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.backpack-footer kbd {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-family: ui-monospace, monospace;
+  font-size: 10px;
+}
+
+.backpack .muted {
+  opacity: 0.65;
+}
+
 .health-bar {
   position: fixed;
   bottom: 20px;

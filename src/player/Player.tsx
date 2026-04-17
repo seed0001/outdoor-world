@@ -12,6 +12,7 @@ import { usePlayerControlsGetter } from "./usePlayerControls";
 import { playerRef } from "../systems/player/playerRef";
 import { health, useHealth } from "../systems/player/health";
 import { onCommand } from "../systems/world/commands";
+import { updateWalkingFoley } from "../systems/audio/gameAudio";
 
 const WALK_SPEED = 4.5;
 const RUN_SPEED = 8.5;
@@ -87,13 +88,6 @@ export default function Player() {
       return;
     }
 
-    if (hp.dead) {
-      // Freeze player while dead.
-      rb.setLinvel({ x: 0, y: v.y, z: 0 }, true);
-      camera.position.set(pos.x, pos.y + EYE_OFFSET, pos.z);
-      return;
-    }
-
     const ray = new rapier.Ray(
       { x: pos.x, y: pos.y, z: pos.z },
       { x: 0, y: -1, z: 0 },
@@ -109,6 +103,20 @@ export default function Player() {
     );
     const grounded = hit !== null;
 
+    if (hp.dead) {
+      // Freeze player while dead.
+      rb.setLinvel({ x: 0, y: v.y, z: 0 }, true);
+      camera.position.set(pos.x, pos.y + EYE_OFFSET, pos.z);
+      updateWalkingFoley({
+        locked: false,
+        grounded,
+        dead: true,
+        horizSpeed: 0,
+        wantsMove: false,
+      });
+      return;
+    }
+
     // Fall damage on landing
     if (grounded && lastYVel.current < -16) {
       const impact = -lastYVel.current - 16;
@@ -119,6 +127,13 @@ export default function Player() {
     if (!locked) {
       rb.setLinvel({ x: 0, y: v.y, z: 0 }, true);
       applyCamera(camera, pos, shakeOffset, state.clock.elapsedTime);
+      updateWalkingFoley({
+        locked: false,
+        grounded,
+        dead: false,
+        horizSpeed: 0,
+        wantsMove: false,
+      });
       return;
     }
 
@@ -151,6 +166,17 @@ export default function Player() {
 
     applyCamera(camera, pos, shakeOffset, state.clock.elapsedTime);
     playerRef.shake = Math.max(0, playerRef.shake - dt * 2);
+
+    const vNow = rb.linvel();
+    const horiz = Math.hypot(vNow.x, vNow.z);
+    const wantsMove = fwd !== 0 || rgt !== 0;
+    updateWalkingFoley({
+      locked,
+      grounded,
+      dead: hp.dead,
+      horizSpeed: horiz,
+      wantsMove,
+    });
   });
 
   return (
