@@ -11,7 +11,8 @@ import { worldState } from "../systems/world/worldState";
 import { computeWoodHarvestTraits } from "../systems/world/woodEcology";
 import { trees as treeList } from "../systems/world/treeRegistry";
 import { getWeather } from "../systems/weather/weatherSystem";
-import { rocks as rockList } from "../systems/world/rockRegistry";
+import { rocks as rockList, type RockSpec } from "../systems/world/rockRegistry";
+import { mineralKindToKey } from "../systems/world/mineralRegistry";
 import { isBackpackOpen } from "../systems/ui/backpackState";
 import {
   isSturdyPlacementMode,
@@ -34,6 +35,20 @@ const STATIC_ROCK_HITS = 4;
 const DYNAMIC_ROCK_HITS = 3;
 
 type HitKind = "tree" | "fallenTree" | "worldLog" | "rock";
+
+/** Stone + optional vein ore go straight into {@link inventory} (same totals as old ground pickups). */
+function grantRockBreakLoot(spec: RockSpec | undefined, phase: "dislodge" | "smash") {
+  const stone =
+    phase === "dislodge"
+      ? 7 + Math.floor(Math.random() * 8)
+      : 5 + Math.floor(Math.random() * 7);
+  inventory.add("stone", stone);
+  if (spec !== undefined) {
+    const ore =
+      2 + Math.floor(Math.random() * 3) + (Math.random() < 0.35 ? 1 : 0);
+    inventory.add(mineralKindToKey(spec.mineralVein), ore);
+  }
+}
 
 function choppablePredicate(collider: Collider) {
   const rb = collider.parent();
@@ -188,6 +203,7 @@ export default function ChopSystem() {
           halfThickness: ht,
           treeKind: t.kind,
         });
+        inventory.add("wood", 6 + Math.floor(Math.random() * 6));
       }
       return;
     }
@@ -208,6 +224,7 @@ export default function ChopSystem() {
           halfLength: hl,
           halfThickness: ht,
         });
+        inventory.add("wood", 5 + Math.floor(Math.random() * 5));
       }
       return;
     }
@@ -233,6 +250,7 @@ export default function ChopSystem() {
         if (traits && traits.refinement > 0.78) sticks += 1;
         if (traits && traits.freshness > 0.88) sticks += 1;
         inventory.add("stick", Math.min(sticks, 12));
+        inventory.add("wood", 3 + Math.floor(Math.random() * 4));
       }
       return;
     }
@@ -267,12 +285,7 @@ export default function ChopSystem() {
             ],
             spawnSimMs: now,
           });
-          worldState.addStonePickupsAround(
-            [spec.x, spec.y + 0.2, spec.z],
-            4,
-            0.55,
-            { mineralVein: spec.mineralVein },
-          );
+          grantRockBreakLoot(spec, "dislodge");
         }
         return;
       }
@@ -290,14 +303,8 @@ export default function ChopSystem() {
         addCameraShake(0.08);
         if (n >= DYNAMIC_ROCK_HITS) {
           dynamicRockChops.current.delete(rockId);
-          const tr = parent.translation();
           worldState.removeDisplacedRock(rockId);
-          worldState.addStonePickupsAround(
-            [tr.x, tr.y + 0.1, tr.z],
-            3,
-            0.45,
-            spec ? { mineralVein: spec.mineralVein } : undefined,
-          );
+          grantRockBreakLoot(spec, "smash");
         }
       }
     }

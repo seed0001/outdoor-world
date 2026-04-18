@@ -21,8 +21,11 @@ Open the URL Vite prints (usually <http://localhost:5173>). Click the canvas to 
 | `Shift` | Run |
 | `Space` | Jump |
 | Mouse | Look |
-| `Esc` | Release mouse |
+| `Esc` | Release mouse (also exits **sturdy placement** mode if active) |
 | `F1` | Toggle the dev panel |
+| `C` | **Sturdy shelter:** open placement preview (or craft a **sturdy shelter kit** from **14 sticks + 6 stones** if you have no kit, inventory & cooldown permitting) |
+| `B` | While previewing (green ring): place the shelter, consuming one kit |
+| `F` | Interact / chop (contextual) |
 
 Append `?debug` to the URL for physics collider visualisation and an FPS counter. Append `?timeScale=60` to fast-forward the simulation 60× (one in-game day per minute); `?season=summer` jumps straight to mid-summer.
 
@@ -54,16 +57,20 @@ Append `?debug` to the URL for physics collider visualisation and an FPS counter
 
 **Player & UI**
 - Capsule rigid body, WASD + jump + run, grounded via downward raycast.
+- **Held axe (first-person):** GLB model at `public/models/axe/axe.glb` with tuned grip alignment and orientation (`systems/settings/axeOrientation.ts`). The asset is **preloaded** when `HeldAxe` loads so it appears at startup rather than after other heavy downloads. A procedural fallback renders if the file is missing or loading fails.
 - Health system: fall damage, lightning damage, hail damage, tornado damage.
-- HUD: clock, date, season, weather icon + label, temperature, health bar, damage vignette, death screen, respawn.
-- Dev panel (`F1`): scrub time scale, jump seasons, force weather, spawn/cancel tornado, trigger lightning, respawn, reset world destruction.
+- HUD: clock, date, season, weather icon + label, temperature, health bar, damage vignette, death screen, respawn; contextual hints for **sturdy shelter** placement and inventory (kits live in a dedicated hotbar slot).
+- **Sturdy primitive shelter:** craftable **sturdy shelter kits** (recipe above; you can hold **up to six** kits). Place with preview ring on valid ground (`B`). The Meshy **FBX** is scaled with a **uniform** factor so the largest axis is ~**3.5 m** (walk-in size, not map-sized). **`SturdyFrames`** (and its FBX download) mount only after **at least one** shelter exists, so the first load stays lighter; the **axe** GLB is preloaded separately for immediate first-person view. **Physics** uses a **thin floor slab** only — a full bounding-box cuboid filled the interior and blocked entry; walls/roof have no collider so you can walk inside. Shelter instances are tracked in `systems/world/sturdyFrames.ts`.
+- **Boot overlay:** `GameBootLoader` shows a full-screen progress bar while early assets load, with a timeout so a stuck huge download does not block forever.
+- Dev panel (`F1`): scrub time scale, jump seasons, force weather, spawn/cancel tornado, trigger lightning, respawn, reset world destruction; can grant shelter kits for testing.
 
 ## Project layout
 
 ```
 src/
   main.tsx                 React root
-  App.tsx                  <Canvas> + <Physics> + scene graph
+  App.tsx                  device splash → GameRoot
+  GameRoot.tsx             Canvas, XR, Physics, world + player graph, HUD shell
   styles.css               HUD, dev panel, overlays
 
   systems/                 Headless state: observable stores + pure calendar math
@@ -79,12 +86,16 @@ src/
       fishRegistry.ts      deterministic fish specs
       butterflyRegistry.ts deterministic butterfly specs
       flowerRegistry.ts    cluster-based flower placement
+      sturdyFrames.ts      placed shelter instances + subscribe API
+      sturdyCraftConstants.ts  shelter kit recipe + inventory cap
     weather/
       types.ts             WeatherType union + WeatherState
       weatherSystem.ts     season-biased state machine + forceWeather()
     player/
       health.ts            hp / damage / respawn + useHealth hook
       playerRef.ts         shared rigid body ref + camera-shake bus
+    ui/
+      sturdyPlacementState.ts  placement mode + ground preview target
 
   world/
     terrain.ts             heightAt(x,z), lake carving, insideLake, PRNG
@@ -100,6 +111,8 @@ src/
     Flowers.tsx            instanced FBX flowers w/ wind sway + seasonal bloom
     Lightning.tsx          flash light, bolt geometry, synthed thunder
     Tornado.tsx            funnel + debris + wind field + persistent destruction
+    SturdyFrames.tsx       Meshy shelter FBX: uniform scale, floor-only physics
+    SturdyPlacementPreview.tsx  placement ring + validity (green / orange)
     Precipitation/
       Rain.tsx             GPU lines
       Hail.tsx             GPU spheres w/ bounce + player damage
@@ -111,13 +124,23 @@ src/
 
   player/
     Player.tsx             capsule RigidBody, input, camera, fall damage
+    HeldAxe.tsx            first-person axe + hand rig, GLTF preload, swing visual
+    ChopSystem.tsx         tree chop rays; B places shelter in preview mode
+    ActionFSystem.tsx      F-key use; C crafts/opens sturdy placement preview
+    TreeInspectRay.tsx     contextual inspect
     usePlayerControls.ts   keyboard control map + typed getter
 
+  systems/settings/
+    axeOrientation.ts      held-axe mesh euler (grip + blade direction)
+
   ui/
-    HUD.tsx                crosshair, world readout, health, death screen
+    HUD.tsx                crosshair, world readout, health, death screen, sturdy hints
+    GameBootLoader.tsx     first-load progress overlay (drei useProgress)
     DevPanel.tsx           F1 debug overlay
     WeatherIcon.tsx        glyph renderer
 ```
+
+Bootstrap: `main.tsx` → `App.tsx` (device selection) → `GameRoot.tsx` (3D world + overlays).
 
 ## How it fits together
 
@@ -138,6 +161,17 @@ Ships with runtime-ready GLB/FBX assets in `public/models/`:
 - `butterfly.glb` — 156-joint rig, three animation clips (`hover`, `idle`, `take_off_and_land`)
 - `fish/Fish.FBX` + loose textures — with URL-remapping for baked-in filename mismatches
 - `flower/Flower.fbx` + loose textures — materials rebuilt from external PNGs (alpha-cut-out billboard)
+- `axe/axe.glb` — first-person axe (add locally if not present; `HeldAxe` falls back to a procedural mesh)
+
+**Primitive sturdy shelter** (`primitive-sturdy/`)
+
+- **Textures** (`*.png`) are in the repo.
+- The **FBX** (`Meshy_AI_A_primitive_sturdy_w_0418175525_texture.fbx`, ~117 MB) is **not committed**: it exceeds GitHub’s **100 MB** per-file limit, and hosting it via **Git LFS** may hit account storage/bandwidth caps. It is listed in `public/models/primitive-sturdy/.gitignore`. For a full local build, place that file next to the textures yourself (e.g. copy from your Meshy export or attach it via **GitHub Releases** / cloud storage for teammates).
+
+## GitHub / large files
+
+- Single files on GitHub must stay **under 100 MB**.
+- Optional **Git LFS** for big binaries requires sufficient **LFS data** on the org/account; if LFS push fails, keep huge assets out of git and distribute them separately.
 
 ## Tech stack
 

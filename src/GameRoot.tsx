@@ -56,6 +56,7 @@ import { sturdyFrames } from "./systems/world/sturdyFrames";
 import GameBootLoader from "./ui/GameBootLoader";
 
 import "./systems/world/groundState";
+import "./systems/player/survival";
 import { unlockGameAudio } from "./systems/audio/gameAudio";
 
 const debug = new URLSearchParams(window.location.search).has("debug");

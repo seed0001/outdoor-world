@@ -8,6 +8,7 @@ const listeners = new Set<() => void>();
 
 export type InventoryItem =
   | "stick"
+  | "wood"
   | "stone"
   | "arrow"
   /** Crafted primitive shelter kit (Meshy “sturdy” FBX); place with B. */
@@ -23,6 +24,7 @@ export type InventoryItem =
 function emptyCounts(): Record<InventoryItem, number> {
   const m = {
     stick: 0,
+    wood: 0,
     stone: 0,
     arrow: 0,
     sturdy_frame: 0,

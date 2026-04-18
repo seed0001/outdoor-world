@@ -4,7 +4,6 @@ import {
   monthName,
   seasonForMonth,
   seasonName,
-  temperatureC,
 } from "../systems/world/calendar";
 import {
   getWeather,
@@ -12,6 +11,7 @@ import {
   WEATHER_LABELS,
 } from "../systems/weather/weatherSystem";
 import { useHealth, health } from "../systems/player/health";
+import { useSurvival } from "../systems/player/survival";
 import { useVitals, vitals } from "../systems/player/vitals";
 import { playerRef } from "../systems/player/playerRef";
 import { inventory, useInventory } from "../systems/player/inventory";
@@ -246,6 +246,7 @@ export default function HUD() {
   const [locked, setLocked] = useState(false);
   const world = useWorldTime(4);
   const hp = useHealth();
+  const survival = useSurvival();
   const v = useVitals();
   const inv = useInventory();
   const [backpackOpen, setBackpackOpenState] = useState(isBackpackOpen);
@@ -353,7 +354,7 @@ export default function HUD() {
   const weather = getWeather();
   void weatherTick;
   const season = seasonForMonth(world.monthIndex);
-  const temp = temperatureC(world, playerRef.position.y, weather.tempMod);
+  const bodyTempC = survival.feltTemperatureC;
 
   const sinceHit = hp.lastDamageAtMs
     ? performance.now() - hp.lastDamageAtMs
@@ -394,7 +395,9 @@ export default function HUD() {
           </div>
           <div className="line muted">
             <span>{seasonName(season)}</span>
-            <span>{temp.toFixed(0)} deg C</span>
+            <span title="Felt air temperature (calendar + weather)">
+              {bodyTempC.toFixed(0)}°C
+            </span>
           </div>
           <div className="line weather">
             <WeatherIcon type={weather.type} />
@@ -466,6 +469,7 @@ export default function HUD() {
                 const isStone = row === 0 && col === 1;
                 const isArrow = row === 0 && col === 7;
                 const isSturdy = row === 0 && col === 8;
+                const isWood = row === 0 && col === 9;
                 const mineralIndex =
                   row === 0 &&
                   col >= 2 &&
@@ -483,6 +487,7 @@ export default function HUD() {
                 const reserved =
                   isStick ||
                   isStone ||
+                  isWood ||
                   isArrow ||
                   isSturdy ||
                   mineralKey !== null ||
@@ -491,29 +496,33 @@ export default function HUD() {
                   ? inv.stick
                   : isStone
                     ? inv.stone
-                    : isArrow
-                      ? inv.arrow
-                      : isSturdy
-                        ? inv.sturdy_frame
-                        : mineralKey
-                          ? inv[mineralKey]
-                          : meat
-                            ? inv[meat.key]
-                            : 0;
+                    : isWood
+                      ? inv.wood
+                      : isArrow
+                        ? inv.arrow
+                        : isSturdy
+                          ? inv.sturdy_frame
+                          : mineralKey
+                            ? inv[mineralKey]
+                            : meat
+                              ? inv[meat.key]
+                              : 0;
                 const filled = reserved && qty > 0;
                 const title = isStick
                   ? "Sticks"
                   : isStone
                     ? "Stone"
-                    : isArrow
-                      ? "Arrows"
-                      : isSturdy
-                        ? "Sturdy shelter kit (B to place)"
-                        : mineralKey
-                          ? MINERAL_NAMES[mineralIndex]
-                          : meat
-                            ? meat.title
-                            : `Slot ${row + 1},${col + 1}`;
+                    : isWood
+                      ? "Wood"
+                      : isArrow
+                        ? "Arrows"
+                        : isSturdy
+                          ? "Sturdy shelter kit (B to place)"
+                          : mineralKey
+                            ? MINERAL_NAMES[mineralIndex]
+                            : meat
+                              ? meat.title
+                              : `Slot ${row + 1},${col + 1}`;
                 return (
                   <div
                     key={i}
@@ -525,6 +534,11 @@ export default function HUD() {
                     ) : isStone ? (
                       <>
                         <span className="backpack-cell__name">Stn</span>
+                        <span className="backpack-cell__qty mono">{qty}</span>
+                      </>
+                    ) : isWood ? (
+                      <>
+                        <span className="backpack-cell__name">Wd</span>
                         <span className="backpack-cell__qty mono">{qty}</span>
                       </>
                     ) : isArrow ? (

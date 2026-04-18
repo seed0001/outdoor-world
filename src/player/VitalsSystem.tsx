@@ -4,10 +4,8 @@ import { vitals } from "../systems/player/vitals";
 import { campfires } from "../systems/world/campfires";
 import { health } from "../systems/player/health";
 
-/** Food / water / HP: slow passive decay from 100 (per second). */
-const FOOD_DRAIN = 0.072;
+/** Food drain is handled by `systems/player/survival.ts` (worldClock sim time). */
 const WATER_DRAIN = 0.092;
-const HEALTH_PASSIVE_DRAIN = 0.028;
 
 /**
  * Sanity only drops when hunger AND thirst are extra low together.
@@ -25,9 +23,7 @@ export default function VitalsSystem() {
     if (health.get().dead) return;
 
     const v = vitals.get();
-    vitals.tickFood(-FOOD_DRAIN, dt);
     vitals.tickWater(-WATER_DRAIN, dt);
-    health.damage(HEALTH_PASSIVE_DRAIN * dt, "exhaustion");
 
     const p = playerRef.position;
     const nearFire = campfires.isNear(p.x, p.y, p.z, 3.2);
