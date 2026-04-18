@@ -78,3 +78,34 @@ export function rayPickFauna(
   tryMap("fish", fish);
   return best;
 }
+
+/**
+ * Closest alive fauna whose hit sphere contains point `(px, py, pz)`.
+ * Used by arrow projectiles (point test each frame).
+ */
+export function faunaSphereHitAtPoint(
+  px: number,
+  py: number,
+  pz: number,
+): { kind: FaunaKind; id: number } | null {
+  const now = performance.now();
+  let bestD = Infinity;
+  let best: { kind: FaunaKind; id: number } | null = null;
+
+  const tryMap = (kind: FaunaKind, m: Map<number, THREE.Vector3>) => {
+    const r = HIT_R[kind];
+    for (const [id, p] of m) {
+      if (!isFaunaAlive(kind, id, now)) continue;
+      const d = Math.hypot(p.x - px, p.y - py, p.z - pz);
+      if (d <= r && d < bestD) {
+        bestD = d;
+        best = { kind, id };
+      }
+    }
+  };
+
+  tryMap("snake", snake);
+  tryMap("rat", rat);
+  tryMap("fish", fish);
+  return best;
+}

@@ -16,6 +16,7 @@ import { isBackpackOpen } from "../systems/ui/backpackState";
 import { playMiningRockSfx, playWoodChopSfx } from "../systems/audio/gameAudio";
 import { rayPickFauna } from "../systems/world/faunaPositions";
 import { killFauna } from "../systems/world/faunaLifecycle";
+import { handWorldPosition } from "./firstPersonHand";
 
 const RAY_LEN = 4.2;
 const CHOP_COOLDOWN = 0.48;
@@ -88,8 +89,7 @@ export default function ChopSystem() {
 
     camera.getWorldDirection(dir.current);
     const o = origin.current;
-    const cpos = camera.position;
-    o.copy(cpos).addScaledVector(dir.current, 0.35);
+    handWorldPosition(camera, o);
 
     const faunaHit = rayPickFauna(
       o.x,

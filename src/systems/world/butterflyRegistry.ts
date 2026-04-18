@@ -1,4 +1,5 @@
 import { HALF, heightAt, insideLake, mulberry32 } from "../../world/terrain";
+import { BUTTERFLY_PLACEMENT_SEED } from "./worldSeed";
 
 export interface ButterflySpec {
   id: number;
@@ -24,12 +25,11 @@ export interface ButterflySpec {
 }
 
 const BUTTERFLY_COUNT = 16;
-const BUTTERFLY_SEED = 88441;
 const MARGIN = 6;
 const MIN_DIST_FROM_SPAWN = 6;
 
 function generate(): ButterflySpec[] {
-  const rand = mulberry32(BUTTERFLY_SEED);
+  const rand = mulberry32(BUTTERFLY_PLACEMENT_SEED);
   const out: ButterflySpec[] = [];
   let guard = 0;
   while (out.length < BUTTERFLY_COUNT && guard++ < BUTTERFLY_COUNT * 30) {

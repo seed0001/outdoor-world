@@ -12,12 +12,10 @@ import { useGLTF } from "@react-three/drei";
 import { SkeletonUtils } from "three-stdlib";
 import { playerRef } from "../systems/player/playerRef";
 import { AXE_ORIENTATION_RAD } from "../systems/settings/axeOrientation";
+import { HAND_OFFSET } from "./firstPersonHand";
 
 /** Static asset: `public/models/axe/axe.glb` */
 const AXE_URL = "/models/axe/axe.glb";
-
-/** Right / down / forward in camera local space (Three.js camera −Z is view). */
-const HAND_OFFSET = new THREE.Vector3(0.42, -0.34, -0.58);
 
 function ProceduralAxe() {
   return (

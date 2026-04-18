@@ -43,14 +43,23 @@ export interface StonePickupPayload {
   minerals: Partial<Record<MineralKind, number>>;
 }
 
+/** Dropped / shot arrow — quaternion matches the GLB orientation on the ground. */
+export interface ArrowPickupPayload {
+  id: number;
+  position: [number, number, number];
+  rotation: [number, number, number, number];
+}
+
 const fallenTrees = new Map<number, FallenTreePayload>();
 const displacedRocks = new Map<number, DisplacedRockPayload>();
 /** Standing trees removed for a placed log. */
 const treesHarvestedToLog = new Set<number>();
 const placedLogs = new Map<number, PlacedLogPayload>();
 const stonePickups = new Map<number, StonePickupPayload>();
+const arrowPickups = new Map<number, ArrowPickupPayload>();
 let nextLogId = 1;
 let nextPickupId = 1;
+let nextArrowPickupId = 1;
 const listeners = new Set<() => void>();
 
 function emit() {
@@ -129,6 +138,15 @@ export const worldState = {
     if (!stonePickups.delete(id)) return;
     emit();
   },
+  addArrowPickup(p: Omit<ArrowPickupPayload, "id">) {
+    const id = nextArrowPickupId++;
+    arrowPickups.set(id, { id, ...p });
+    emit();
+  },
+  removeArrowPickup(id: number) {
+    if (!arrowPickups.delete(id)) return;
+    emit();
+  },
   removeDisplacedRock(rockId: number) {
     if (!displacedRocks.delete(rockId)) return;
     emit();
@@ -154,6 +172,9 @@ export const worldState = {
   listStonePickups(): StonePickupPayload[] {
     return Array.from(stonePickups.values());
   },
+  listArrowPickups(): ArrowPickupPayload[] {
+    return Array.from(arrowPickups.values());
+  },
   listTreesHarvestedToLog(): number[] {
     return Array.from(treesHarvestedToLog);
   },
@@ -163,8 +184,10 @@ export const worldState = {
     treesHarvestedToLog.clear();
     placedLogs.clear();
     stonePickups.clear();
+    arrowPickups.clear();
     nextLogId = 1;
     nextPickupId = 1;
+    nextArrowPickupId = 1;
     emit();
   },
   subscribe(cb: () => void): () => void {

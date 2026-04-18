@@ -9,6 +9,7 @@ const listeners = new Set<() => void>();
 export type InventoryItem =
   | "stick"
   | "stone"
+  | "arrow"
   | "raw_rat"
   | "raw_snake"
   | "raw_fish"
@@ -21,6 +22,7 @@ function emptyCounts(): Record<InventoryItem, number> {
   const m = {
     stick: 0,
     stone: 0,
+    arrow: 0,
     raw_rat: 0,
     raw_snake: 0,
     raw_fish: 0,

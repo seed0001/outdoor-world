@@ -256,6 +256,14 @@ export default function DevPanel() {
           >
             Reset clock
           </button>
+          <button
+            type="button"
+            onClick={() => {
+              inventory.add("arrow", 12);
+            }}
+          >
+            Give arrows
+          </button>
         </div>
       </section>
     </div>

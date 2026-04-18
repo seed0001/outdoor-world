@@ -397,6 +397,9 @@ export default function HUD() {
           <div>
             <kbd>E</kbd> eat cooked meat
           </div>
+          <div>
+            <kbd>RMB</kbd> shoot arrow
+          </div>
         </div>
       )}
 
@@ -423,6 +426,7 @@ export default function HUD() {
                 const row = Math.floor(i / 12);
                 const isStick = row === 0 && col === 0;
                 const isStone = row === 0 && col === 1;
+                const isArrow = row === 0 && col === 7;
                 const mineralIndex =
                   row === 0 &&
                   col >= 2 &&
@@ -438,12 +442,18 @@ export default function HUD() {
                     ? MEAT_ROW[col]
                     : null;
                 const reserved =
-                  isStick || isStone || mineralKey !== null || meat !== null;
+                  isStick ||
+                  isStone ||
+                  isArrow ||
+                  mineralKey !== null ||
+                  meat !== null;
                 const qty = isStick
                   ? inv.stick
                   : isStone
                     ? inv.stone
-                    : mineralKey
+                    : isArrow
+                      ? inv.arrow
+                      : mineralKey
                       ? inv[mineralKey]
                       : meat
                         ? inv[meat.key]
@@ -453,7 +463,9 @@ export default function HUD() {
                   ? "Sticks"
                   : isStone
                     ? "Stone"
-                    : mineralKey
+                    : isArrow
+                      ? "Arrows"
+                      : mineralKey
                       ? MINERAL_NAMES[mineralIndex]
                       : meat
                         ? meat.title
@@ -469,6 +481,11 @@ export default function HUD() {
                     ) : isStone ? (
                       <>
                         <span className="backpack-cell__name">Stn</span>
+                        <span className="backpack-cell__qty mono">{qty}</span>
+                      </>
+                    ) : isArrow ? (
+                      <>
+                        <span className="backpack-cell__name">Arr</span>
                         <span className="backpack-cell__qty mono">{qty}</span>
                       </>
                     ) : mineralKey && mineralIndex >= 0 ? (
@@ -610,6 +627,10 @@ export default function HUD() {
             <kbd>LMB</kbd>
           </span>
           <span>chop / gather</span>
+          <span>
+            <kbd>RMB</kbd>
+          </span>
+          <span>shoot arrow</span>
           <span>
             <kbd>F1</kbd>
           </span>

@@ -34,6 +34,7 @@ import HeadingSync from "./player/HeadingSync";
 import VitalsSystem from "./player/VitalsSystem";
 import Logs from "./world/Logs";
 import StonePickups from "./world/StonePickups";
+import Arrows from "./world/Arrows";
 import WorldBounds from "./world/WorldBounds";
 import Campfires from "./world/Campfires";
 import HUD from "./ui/HUD";
@@ -93,6 +94,9 @@ export default function App() {
               <Flowers />
             </Suspense>
             <StonePickups />
+            <Suspense fallback={null}>
+              <Arrows />
+            </Suspense>
             <Player />
             <HeldAxe />
             <ChopSystem />

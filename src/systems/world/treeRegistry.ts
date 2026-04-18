@@ -1,5 +1,6 @@
 import { HALF, heightAt, insideLake, mulberry32 } from "../../world/terrain";
 import { nearSnakeDen } from "./snakeDen";
+import { TREE_PLACEMENT_SEED } from "./worldSeed";
 
 /**
  * 0 oak · 1 pine · 2 birch · 3 elm (spreading round crown).
@@ -22,11 +23,9 @@ export interface TreeSpec {
   phase: number;
 }
 
-const TREE_SEED = 1338;
-
 /** Deterministic kind from id so placement RNG stream is unchanged vs older builds. */
 function kindFromId(id: number): TreeKind {
-  return (((id * 1103515245 + TREE_SEED) >>> 0) % 4) as TreeKind;
+  return (((id * 1103515245 + TREE_PLACEMENT_SEED) >>> 0) % 4) as TreeKind;
 }
 
 function applyKindProfile(
@@ -65,13 +64,13 @@ function applyKindProfile(
   }
 }
 
-const TREE_COUNT = 180;
+const TREE_COUNT = 260;
 const MIN_DIST_FROM_SPAWN = 6;
 const MARGIN = 4;
 const LAKE_SHORE_BUFFER = 1.8;
 
 function generate(): TreeSpec[] {
-  const rand = mulberry32(TREE_SEED);
+  const rand = mulberry32(TREE_PLACEMENT_SEED);
   const out: TreeSpec[] = [];
   let guard = 0;
   while (out.length < TREE_COUNT && guard++ < TREE_COUNT * 30) {

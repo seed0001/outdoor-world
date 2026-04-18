@@ -39,6 +39,7 @@ pnpm-debug.log*
 /b-29-superfortress-over-exposed-crash-site/
 
 # Loose copies at repo root (runtime assets live under public/)
+/arrow.glb
 /424251__seenms__bird-songs-in-forest.wav
 /nighttime.mp3
 /Meshy_AI_small_bundle_of_stick_0407140321_generate.fbx

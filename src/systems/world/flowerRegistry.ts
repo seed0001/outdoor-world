@@ -6,6 +6,7 @@ import {
   mulberry32,
 } from "../../world/terrain";
 import { butterflies } from "./butterflyRegistry";
+import { FLOWER_PLACEMENT_SEED } from "./worldSeed";
 
 export interface FlowerSpec {
   id: number;
@@ -27,8 +28,6 @@ interface Cluster {
   count: number;
 }
 
-/** Bump seed when placement rules change so clusters reshuffle. */
-const FLOWER_SEED = 76542;
 const MARGIN = 6;
 const MIN_DIST_FROM_SPAWN = 5;
 const CLUSTER_COUNT = 12;
@@ -36,7 +35,7 @@ const MIN_CLUSTER_RADIUS = 2.4;
 const MAX_CLUSTER_RADIUS = 4.5;
 
 function generate(): FlowerSpec[] {
-  const rand = mulberry32(FLOWER_SEED);
+  const rand = mulberry32(FLOWER_PLACEMENT_SEED);
   const clusters: Cluster[] = [];
 
   // Cluster anchors — random patches on open terrain.

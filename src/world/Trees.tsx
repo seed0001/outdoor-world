@@ -1,119 +1,12 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import * as THREE from "three";
-import { useFrame } from "@react-three/fiber";
+import { useEffect, useRef, useState } from "react";
 import { CylinderCollider, RigidBody } from "@react-three/rapier";
-import { createFoliageMaterial } from "./shaders/foliageMaterial";
-import { snapshot } from "../systems/world/worldClock";
-import { yearPhase } from "../systems/world/calendar";
-import { getWeather } from "../systems/weather/weatherSystem";
 import { worldState, type FallenTreePayload } from "../systems/world/worldState";
-import {
-  trees as treeList,
-  type TreeKind,
-  type TreeSpec,
-} from "../systems/world/treeRegistry";
-
-const HIDDEN_MATRIX = new THREE.Matrix4().makeScale(0, 0, 0);
+import { trees as treeList } from "../systems/world/treeRegistry";
+import EzTreeForest from "./EzTreeForest";
 
 const TRUNK_COLORS = ["#4a2b14", "#2d1a0c", "#c8b8a8", "#3d2818"] as const;
 
-/** One instanced batch per kind — built once from the static registry. */
-const treeBuckets: TreeSpec[][] = [[], [], [], []];
-for (const t of treeList) {
-  treeBuckets[t.kind].push(t);
-}
-
-const treeIdToSlot = new Map<
-  number,
-  { kind: TreeKind; index: number }
->();
-for (let k = 0; k < 4; k++) {
-  const kind = k as TreeKind;
-  treeBuckets[kind].forEach((t, i) => {
-    treeIdToSlot.set(t.id, { kind, index: i });
-  });
-}
-
-function makeFoliageGeometry(kind: TreeKind, bucket: TreeSpec[]): THREE.BufferGeometry {
-  let g: THREE.BufferGeometry;
-  if (kind === 3) {
-    g = new THREE.IcosahedronGeometry(1, 1);
-  } else if (kind === 1) {
-    g = new THREE.ConeGeometry(1, 1, 10);
-  } else {
-    g = new THREE.ConeGeometry(1, 1, 8);
-  }
-  const phaseArr = new Float32Array(bucket.length);
-  for (let i = 0; i < bucket.length; i++) phaseArr[i] = bucket[i].phase;
-  g.setAttribute(
-    "aPhase",
-    new THREE.InstancedBufferAttribute(phaseArr, 1),
-  );
-  return g;
-}
-
-const TRUNK_GEOM: THREE.BufferGeometry[] = [
-  new THREE.CylinderGeometry(0.18, 0.28, 1, 8),
-  new THREE.CylinderGeometry(0.12, 0.17, 1, 8),
-  new THREE.CylinderGeometry(0.09, 0.13, 1, 8),
-  new THREE.CylinderGeometry(0.16, 0.24, 1, 8),
-];
-
-const FOLIAGE_GEOM: THREE.BufferGeometry[] = [
-  makeFoliageGeometry(0, treeBuckets[0]),
-  makeFoliageGeometry(1, treeBuckets[1]),
-  makeFoliageGeometry(2, treeBuckets[2]),
-  makeFoliageGeometry(3, treeBuckets[3]),
-];
-
-function writeTrunkMatrix(t: TreeSpec, into: THREE.Object3D) {
-  into.position.set(t.x, t.y + t.trunkHeight / 2, t.z);
-  into.rotation.set(0, t.rot, 0);
-  into.scale.set(t.scale, t.trunkHeight, t.scale);
-  into.updateMatrix();
-}
-
-function writeFoliageMatrix(t: TreeSpec, into: THREE.Object3D) {
-  into.position.set(
-    t.x,
-    t.y + t.trunkHeight + t.foliageHeight / 2,
-    t.z,
-  );
-  into.rotation.set(0, t.rot, 0);
-  into.scale.set(t.foliageRadius, t.foliageHeight, t.foliageRadius);
-  into.updateMatrix();
-}
-
 export default function Trees() {
-  const trunkRef0 = useRef<THREE.InstancedMesh>(null);
-  const trunkRef1 = useRef<THREE.InstancedMesh>(null);
-  const trunkRef2 = useRef<THREE.InstancedMesh>(null);
-  const trunkRef3 = useRef<THREE.InstancedMesh>(null);
-  const foliageRef0 = useRef<THREE.InstancedMesh>(null);
-  const foliageRef1 = useRef<THREE.InstancedMesh>(null);
-  const foliageRef2 = useRef<THREE.InstancedMesh>(null);
-  const foliageRef3 = useRef<THREE.InstancedMesh>(null);
-
-  const trunkRefs = [trunkRef0, trunkRef1, trunkRef2, trunkRef3];
-  const foliageRefs = [foliageRef0, foliageRef1, foliageRef2, foliageRef3];
-
-  const trunkMats = useMemo(
-    () =>
-      TRUNK_COLORS.map(
-        (c) =>
-          new THREE.MeshStandardMaterial({
-            color: c,
-            roughness: 0.95,
-          }),
-      ),
-    [],
-  );
-
-  const { material: foliageMat, uniforms } = useMemo(
-    () => createFoliageMaterial(),
-    [],
-  );
-
   const [standingHiddenIds, setStandingHiddenIds] = useState<Set<number>>(
     new Set(),
   );
@@ -134,80 +27,9 @@ export default function Trees() {
     return worldState.subscribe(sync);
   }, []);
 
-  useEffect(() => {
-    const dummy = new THREE.Object3D();
-    for (const t of treeList) {
-      const slot = treeIdToSlot.get(t.id);
-      if (!slot) continue;
-      const tr = trunkRefs[slot.kind].current;
-      const fo = foliageRefs[slot.kind].current;
-      if (!tr || !fo) continue;
-      if (standingHiddenIds.has(t.id)) {
-        tr.setMatrixAt(slot.index, HIDDEN_MATRIX);
-        fo.setMatrixAt(slot.index, HIDDEN_MATRIX);
-      } else {
-        writeTrunkMatrix(t, dummy);
-        tr.setMatrixAt(slot.index, dummy.matrix);
-        writeFoliageMatrix(t, dummy);
-        fo.setMatrixAt(slot.index, dummy.matrix);
-      }
-    }
-    for (let k = 0; k < 4; k++) {
-      const tr = trunkRefs[k].current;
-      const fo = foliageRefs[k].current;
-      if (tr) {
-        tr.instanceMatrix.needsUpdate = true;
-        tr.computeBoundingSphere();
-      }
-      if (fo) {
-        fo.instanceMatrix.needsUpdate = true;
-        fo.computeBoundingSphere();
-      }
-    }
-  }, [standingHiddenIds]);
-
-  useEffect(
-    () => () => {
-      TRUNK_GEOM.forEach((g) => g.dispose());
-      FOLIAGE_GEOM.forEach((g) => g.dispose());
-      trunkMats.forEach((m) => m.dispose());
-      foliageMat.dispose();
-    },
-    [trunkMats, foliageMat],
-  );
-
-  useFrame((_, dt) => {
-    const { yearFrac } = snapshot();
-    const weather = getWeather();
-    uniforms.uYearPhase.value = yearPhase(yearFrac);
-    uniforms.uTime.value += dt;
-    const target = weather.windStrength;
-    uniforms.uWind.value +=
-      (target - uniforms.uWind.value) * Math.min(1, dt * 2);
-  });
-
   return (
     <group>
-      {[0, 1, 2, 3].map((k) => {
-        const n = treeBuckets[k].length;
-        if (n === 0) return null;
-        return (
-          <group key={k}>
-            <instancedMesh
-              ref={trunkRefs[k]}
-              args={[TRUNK_GEOM[k], trunkMats[k], n]}
-              castShadow
-              receiveShadow
-            />
-            <instancedMesh
-              ref={foliageRefs[k]}
-              args={[FOLIAGE_GEOM[k], foliageMat, n]}
-              castShadow
-              receiveShadow
-            />
-          </group>
-        );
-      })}
+      <EzTreeForest standingHiddenIds={standingHiddenIds} />
 
       {treeList.map((t) => {
         if (standingHiddenIds.has(t.id)) return null;
