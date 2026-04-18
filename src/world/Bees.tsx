@@ -1,4 +1,11 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  Suspense,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import { useGLTF, useTexture } from "@react-three/drei";
@@ -24,6 +31,9 @@ const HIVE_THREAT_RADIUS = 10.5;
 const AGGRESSIVE_SPEED_MULT = 2.65;
 
 useGLTF.preload(MODEL_URL);
+for (const url of BEE_TEX_URLS) {
+  useTexture.preload(url);
+}
 
 const _seek = new THREE.Vector3();
 const _noiseVec = new THREE.Vector3();
@@ -33,8 +43,20 @@ const _playerAim = new THREE.Vector3();
 
 /**
  * Bees live on {@link beeHiveInfo}; near the hive they chase the player and can sting.
+ * Hive marker is not asset-bound so it stays visible even if the GLB/textures suspend or fail.
  */
 export default function Bees() {
+  return (
+    <group>
+      <BeeHiveMarker />
+      <Suspense fallback={null}>
+        <BeeSwarmModels />
+      </Suspense>
+    </group>
+  );
+}
+
+function BeeSwarmModels() {
   const gltf = useGLTF(MODEL_URL) as unknown as {
     scene: THREE.Group;
     animations: THREE.AnimationClip[];
@@ -64,8 +86,7 @@ export default function Bees() {
   }, [gltf.scene]);
 
   return (
-    <group>
-      <BeeHiveMarker />
+    <>
       {bees.map((spec) => (
         <OneBee
           key={spec.id}
@@ -78,7 +99,7 @@ export default function Bees() {
           normal={normal}
         />
       ))}
-    </group>
+    </>
   );
 }
 
@@ -198,8 +219,8 @@ function OneBee({
           const src = mesh.material as THREE.Material | THREE.Material[];
           if (Array.isArray(src)) {
             for (const mat of src)
-              applyBeeMaps(mat, { diffuse, occlusion, normal });
-          } else applyBeeMaps(src, { diffuse, occlusion, normal });
+              applyBeeMaps(mesh, mat, { diffuse, occlusion, normal });
+          } else applyBeeMaps(mesh, src, { diffuse, occlusion, normal });
         }
       }
     });
@@ -326,8 +347,10 @@ function OneBee({
 /**
  * Applies embedded diffuse / AO / normal from `public/models/bee/textures/*`.
  * The source GLB uses spec/gloss + empty MR params so the loader never binds {@link MeshStandardMaterial.map}.
+ * AO is skipped without `uv2` — assigning {@link MeshStandardMaterial.aoMap} without a second UV breaks skinned shaders.
  */
 function applyBeeMaps(
+  mesh: THREE.Mesh,
   m: THREE.Material,
   tex: {
     diffuse: THREE.Texture;
@@ -335,44 +358,63 @@ function applyBeeMaps(
     normal: THREE.Texture;
   },
 ): void {
-  m.needsUpdate = true;
-  m.depthWrite = true;
+  const geo = mesh.geometry as THREE.BufferGeometry;
+  const hasUv2 = !!geo.attributes.uv2;
 
-  if (
-    !(m instanceof THREE.MeshStandardMaterial) &&
-    !(m instanceof THREE.MeshPhysicalMaterial)
-  ) {
+  const applyToStandard = (mat: THREE.MeshStandardMaterial | THREE.MeshPhysicalMaterial) => {
+    mat.needsUpdate = true;
+    mat.depthWrite = true;
+    if (mat instanceof THREE.MeshPhysicalMaterial) {
+      mat.transmission = 0;
+      mat.thickness = 0;
+      mat.attenuationDistance = Infinity;
+      mat.clearcoat = 0;
+    }
+    mat.map = tex.diffuse;
+    mat.aoMap = hasUv2 ? tex.occlusion : null;
+    mat.aoMapIntensity = hasUv2 ? 1 : 0;
+    mat.normalMap = tex.normal;
+    mat.normalScale = new THREE.Vector2(0.9, 0.9);
+    mat.metalness = 0.12;
+    mat.roughness = 0.58;
+    mat.envMapIntensity = Math.min(mat.envMapIntensity ?? 1, 0.82);
+    mat.side = THREE.DoubleSide;
+    if (mat.emissiveMap) mat.emissiveMap.colorSpace = THREE.SRGBColorSpace;
+
+    const wantsBlend = mat.map != null && mat.map.format === THREE.RGBAFormat;
+    if (wantsBlend) {
+      mat.alphaTest = 0.35;
+      mat.transparent = false;
+      mat.opacity = 1;
+    } else {
+      mat.transparent = false;
+      mat.opacity = 1;
+      mat.alphaTest = 0;
+    }
+  };
+
+  if (m instanceof THREE.MeshStandardMaterial || m instanceof THREE.MeshPhysicalMaterial) {
+    applyToStandard(m);
     return;
   }
 
-  const mat = m as THREE.MeshPhysicalMaterial;
-  mat.transmission = 0;
-  mat.thickness = 0;
-  mat.attenuationDistance = Infinity;
-  mat.clearcoat = 0;
-  mat.map = tex.diffuse;
-  mat.aoMap = tex.occlusion;
-  mat.aoMapIntensity = 1;
-  mat.normalMap = tex.normal;
-  mat.normalScale = new THREE.Vector2(0.9, 0.9);
-  mat.metalness = 0.12;
-  mat.roughness = 0.58;
-  mat.envMapIntensity = Math.min(mat.envMapIntensity ?? 1, 0.82);
-
-  mat.side = THREE.DoubleSide;
-
-  if (mat.emissiveMap) mat.emissiveMap.colorSpace = THREE.SRGBColorSpace;
-
-  const wantsBlend =
-    mat.map != null && mat.map.format === THREE.RGBAFormat;
-
-  if (wantsBlend) {
-    mat.alphaTest = 0.35;
-    mat.transparent = false;
-    mat.opacity = 1;
-  } else {
-    mat.transparent = false;
-    mat.opacity = 1;
-    mat.alphaTest = 0;
+  const replacement = new THREE.MeshStandardMaterial({
+    map: tex.diffuse,
+    normalMap: tex.normal,
+    normalScale: new THREE.Vector2(0.9, 0.9),
+    metalness: 0.12,
+    roughness: 0.58,
+    side: THREE.DoubleSide,
+    depthWrite: true,
+  });
+  if (hasUv2) {
+    replacement.aoMap = tex.occlusion;
+    replacement.aoMapIntensity = 1;
   }
+  replacement.map!.colorSpace = THREE.SRGBColorSpace;
+  replacement.normalMap!.colorSpace = THREE.NoColorSpace;
+  if (replacement.aoMap) replacement.aoMap.colorSpace = THREE.NoColorSpace;
+  replacement.needsUpdate = true;
+  m.dispose();
+  mesh.material = replacement;
 }
