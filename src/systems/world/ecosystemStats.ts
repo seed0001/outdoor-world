@@ -9,7 +9,6 @@ import { fishes } from "./fishRegistry";
 import { butterflies } from "./butterflyRegistry";
 import { flowers } from "./flowerRegistry";
 import { rats } from "./ratRegistry";
-import { scorpions } from "./scorpionRegistry";
 import { computeButterflyVisibility } from "./butterflyVisibility";
 
 /** Volumetric cloud billboards (see `world/Clouds.tsx`). */
@@ -40,7 +39,6 @@ export interface EcosystemSnapshot {
   fauna: {
     snakes: number;
     rats: number;
-    scorpions: number;
     fish: number;
     butterfliesSpawned: number;
     butterflyVisibility: ReturnType<typeof computeButterflyVisibility>;
@@ -87,7 +85,6 @@ export function getEcosystemSnapshot(): EcosystemSnapshot {
     fauna: {
       snakes: snakes.length,
       rats: rats.length,
-      scorpions: scorpions.length,
       fish: fishes.length,
       butterfliesSpawned: butterflies.length,
       butterflyVisibility: computeButterflyVisibility(world, weather),

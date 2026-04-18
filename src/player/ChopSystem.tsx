@@ -13,7 +13,9 @@ import { trees as treeList } from "../systems/world/treeRegistry";
 import { getWeather } from "../systems/weather/weatherSystem";
 import { rocks as rockList } from "../systems/world/rockRegistry";
 import { isBackpackOpen } from "../systems/ui/backpackState";
-import { playWoodChopSfx } from "../systems/audio/gameAudio";
+import { playMiningRockSfx, playWoodChopSfx } from "../systems/audio/gameAudio";
+import { rayPickFauna } from "../systems/world/faunaPositions";
+import { killFauna } from "../systems/world/faunaLifecycle";
 
 const RAY_LEN = 4.2;
 const CHOP_COOLDOWN = 0.48;
@@ -88,6 +90,22 @@ export default function ChopSystem() {
     const o = origin.current;
     const cpos = camera.position;
     o.copy(cpos).addScaledVector(dir.current, 0.35);
+
+    const faunaHit = rayPickFauna(
+      o.x,
+      o.y,
+      o.z,
+      dir.current.x,
+      dir.current.y,
+      dir.current.z,
+      RAY_LEN,
+    );
+    if (faunaHit && killFauna(faunaHit.kind, faunaHit.id)) {
+      playerRef.axeSwing = 1;
+      addCameraShake(0.1);
+      playWoodChopSfx();
+      return;
+    }
 
     const ray = new rapier.Ray(
       { x: o.x, y: o.y, z: o.z },
@@ -194,6 +212,7 @@ export default function ChopSystem() {
       if (!isDisplaced && spec && spec.scale >= BIG_STATIC_ROCK) {
         const n = (staticRockChops.current.get(rockId) ?? 0) + 1;
         staticRockChops.current.set(rockId, n);
+        playMiningRockSfx();
         addCameraShake(0.09);
         if (n >= STATIC_ROCK_HITS) {
           staticRockChops.current.delete(rockId);
@@ -234,6 +253,7 @@ export default function ChopSystem() {
 
         const n = (dynamicRockChops.current.get(rockId) ?? 0) + 1;
         dynamicRockChops.current.set(rockId, n);
+        playMiningRockSfx();
         addCameraShake(0.08);
         if (n >= DYNAMIC_ROCK_HITS) {
           dynamicRockChops.current.delete(rockId);

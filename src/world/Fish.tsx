@@ -13,6 +13,8 @@ import { LAKE_CENTER_X, LAKE_CENTER_Z } from "./terrain";
 import { snapshot } from "../systems/world/worldClock";
 import { getWeather } from "../systems/weather/weatherSystem";
 import { temperatureC } from "../systems/world/calendar";
+import { isFaunaAlive } from "../systems/world/faunaLifecycle";
+import { faunaPositions } from "../systems/world/faunaPositions";
 
 const MODEL_URL = "/models/fish/Fish.FBX";
 
@@ -119,11 +121,24 @@ function OneFish({ spec, template, baseScale, forwardQuat }: OneFishProps) {
   // Mutable per-fish simulation state. Seeded from spec so behaviour is
   // deterministic across reloads but varied between fish.
   const sim = useRef(createSim(spec));
+  const prevAliveRef = useRef(true);
 
   useFrame((_, dtRaw) => {
     const dt = Math.min(dtRaw, 0.1); // cap huge frames after tab-switch
+    const nowMs = performance.now();
+    const alive = isFaunaAlive("fish", spec.id, nowMs);
+    if (alive && !prevAliveRef.current) {
+      sim.current = createSim(spec);
+    }
+    prevAliveRef.current = alive;
+    if (!alive) {
+      if (groupRef.current) groupRef.current.visible = false;
+      return;
+    }
+    if (groupRef.current) groupRef.current.visible = true;
+
     const s = sim.current;
-    const now = performance.now() / 1000;
+    const now = nowMs / 1000;
 
     const world = snapshot();
     const weather = getWeather();
@@ -198,6 +213,9 @@ function OneFish({ spec, template, baseScale, forwardQuat }: OneFishProps) {
         Math.sin(now * spec.wagFreq * (0.5 + speedFrac * 0.7) + spec.phase * 6.28) *
         wagAmp;
     }
+
+    const bob = Math.sin(now * 1.1 + spec.phase * 6.28) * 0.025;
+    faunaPositions.setFish(spec.id, s.pos.x, s.pos.y + bob, s.pos.z);
   });
 
   return (

@@ -3,6 +3,8 @@ import * as THREE from "three";
 import { useFrame, useLoader } from "@react-three/fiber";
 import { FBXLoader, SkeletonUtils } from "three-stdlib";
 import { rats, type RatSpec } from "../systems/world/ratRegistry";
+import { isFaunaAlive } from "../systems/world/faunaLifecycle";
+import { faunaPositions } from "../systems/world/faunaPositions";
 
 const MODEL_URL = "/models/black-rat/blackrat.fbx";
 
@@ -132,6 +134,13 @@ function Rat({
       groupRef.current.rotation.z =
         Math.sin(t * spec.animSpeed + spec.animPhase * 6.28) * 0.04;
     }
+
+    const now = performance.now();
+    const alive = isFaunaAlive("rat", spec.id, now);
+    if (groupRef.current) groupRef.current.visible = alive;
+    if (!alive) return;
+    const wy = spec.y + groundOffset * baseScale * spec.scale;
+    faunaPositions.setRat(spec.id, spec.x, wy, spec.z);
   });
 
   return (

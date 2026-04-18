@@ -4,6 +4,8 @@ import { useFrame } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
 import { SkeletonUtils } from "three-stdlib";
 import { snakes, type SnakeSpec } from "../systems/world/snakeRegistry";
+import { isFaunaAlive } from "../systems/world/faunaLifecycle";
+import { faunaPositions } from "../systems/world/faunaPositions";
 import { heightAt } from "./terrain";
 
 const MODEL_URL = "/models/timber-rattlesnake.glb";
@@ -89,6 +91,7 @@ function Snake({
   const groupRef = useRef<THREE.Group>(null);
   const mixerRef = useRef<THREE.AnimationMixer | null>(null);
 
+  const prevAliveRef = useRef(true);
   const simRef = useRef<SnakeSim | undefined>(undefined);
   if (!simRef.current) {
     const now = performance.now();
@@ -138,6 +141,22 @@ function Snake({
 
     const s = simRef.current!;
     const now = performance.now();
+    const alive = isFaunaAlive("snake", spec.id, now);
+    if (alive && !prevAliveRef.current) {
+      s.phase = "den";
+      s.pos.set(spec.denX, spec.denY, spec.denZ);
+      s.target.set(spec.denX, spec.denY, spec.denZ);
+      s.yaw = spec.animPhase * Math.PI * 2;
+      s.emergeAt = now + 3000 + spec.timerOffset * 180;
+      s.roamUntil = 0;
+    }
+    prevAliveRef.current = alive;
+    if (!alive) {
+      if (groupRef.current) groupRef.current.visible = false;
+      return;
+    }
+    if (groupRef.current) groupRef.current.visible = true;
+
     const crawl = CRAWL_SPEED * (0.85 + spec.animSpeed * 0.15);
     const foot = groundOffset * baseScale * spec.scale;
     const buryAmt =
@@ -192,6 +211,7 @@ function Snake({
         g.rotation.z = 0;
       }
     }
+    faunaPositions.setSnake(spec.id, gx, gy, gz);
   });
 
   return (

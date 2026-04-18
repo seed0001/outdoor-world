@@ -5,6 +5,7 @@ const URL_BIRD = "/audio/bird-day.wav";
 const URL_NIGHT = "/audio/nighttime.mp3";
 const URL_WALK = "/audio/walking-brush.wav";
 const URL_AXE = "/audio/axe-chop.wav";
+const URL_PIXAXE_MINING = "/audio/pixaxe-mining.wav";
 const URL_ZIP = "/audio/bag-zip.mp3";
 
 let unlocked = false;
@@ -65,6 +66,17 @@ export function playWoodChopSfx() {
   lastChopSfx = now;
   const a = new Audio(URL_AXE);
   a.volume = 0.55;
+  void a.play().catch(() => {});
+}
+
+/** Stone / rock hits: `public/audio/pixaxe-mining.wav`. Shares chop cooldown with wood. */
+export function playMiningRockSfx() {
+  if (!unlocked) return;
+  const now = performance.now();
+  if (now - lastChopSfx < CHOP_SFX_COOLDOWN_MS) return;
+  lastChopSfx = now;
+  const a = new Audio(URL_PIXAXE_MINING);
+  a.volume = 0.52;
   void a.play().catch(() => {});
 }
 

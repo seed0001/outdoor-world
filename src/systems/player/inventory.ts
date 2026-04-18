@@ -9,12 +9,24 @@ const listeners = new Set<() => void>();
 export type InventoryItem =
   | "stick"
   | "stone"
+  | "raw_rat"
+  | "raw_snake"
+  | "raw_fish"
+  | "cooked_rat"
+  | "cooked_snake"
+  | "cooked_fish"
   | MineralInventoryKey;
 
 function emptyCounts(): Record<InventoryItem, number> {
   const m = {
     stick: 0,
     stone: 0,
+    raw_rat: 0,
+    raw_snake: 0,
+    raw_fish: 0,
+    cooked_rat: 0,
+    cooked_snake: 0,
+    cooked_fish: 0,
   } as Record<InventoryItem, number>;
   for (const k of MINERAL_INVENTORY_KEYS) {
     m[k] = 0;
@@ -43,6 +55,19 @@ export const inventory = {
     if (n <= 0) return;
     counts[item] += n;
     emit();
+  },
+  /** Returns false if any requested amount is not available. */
+  tryConsume(req: Partial<Record<InventoryItem, number>>): boolean {
+    const entries = Object.entries(req) as [InventoryItem, number][];
+    for (const [k, v] of entries) {
+      if (v <= 0) continue;
+      if (counts[k] < v) return false;
+    }
+    for (const [k, v] of entries) {
+      if (v > 0) counts[k] -= v;
+    }
+    emit();
+    return true;
   },
   subscribe(cb: () => void) {
     listeners.add(cb);

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { vitals } from "./vitals";
 
 export interface HealthState {
   hp: number;
@@ -50,6 +51,7 @@ export const health = {
   },
   respawn() {
     state = { ...DEFAULT };
+    vitals.reset();
     emit();
   },
   subscribe(cb: () => void): () => void {

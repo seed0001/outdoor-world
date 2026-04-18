@@ -17,7 +17,6 @@ import Rocks from "./world/Rocks";
 import SnakeDen from "./world/SnakeDen";
 import Snakes from "./world/Snakes";
 import Rats from "./world/Rats";
-import Scorpions from "./world/Scorpions";
 import Fish from "./world/Fish";
 import Butterfly from "./world/Butterfly";
 import Flowers from "./world/Flowers";
@@ -29,11 +28,14 @@ import Tornado from "./world/Tornado";
 import Player from "./player/Player";
 import HeldAxe from "./player/HeldAxe";
 import ChopSystem from "./player/ChopSystem";
+import ActionFSystem from "./player/ActionFSystem";
 import TreeInspectRay from "./player/TreeInspectRay";
 import HeadingSync from "./player/HeadingSync";
+import VitalsSystem from "./player/VitalsSystem";
 import Logs from "./world/Logs";
 import StonePickups from "./world/StonePickups";
 import WorldBounds from "./world/WorldBounds";
+import Campfires from "./world/Campfires";
 import HUD from "./ui/HUD";
 import TreeInspectPopup from "./ui/TreeInspectPopup";
 import DevPanel from "./ui/DevPanel";
@@ -85,9 +87,6 @@ export default function App() {
               <Rats />
             </Suspense>
             <Suspense fallback={null}>
-              <Scorpions />
-            </Suspense>
-            <Suspense fallback={null}>
               <Fish />
             </Suspense>
             <Suspense fallback={null}>
@@ -99,8 +98,10 @@ export default function App() {
             <ChopSystem />
             <TreeInspectRay />
             <HeadingSync />
+            <VitalsSystem />
             <Tornado />
           </Physics>
+          <Campfires />
           <Suspense fallback={null}>
             <Precipitation />
             <Lightning />
@@ -113,6 +114,7 @@ export default function App() {
         </Canvas>
       </KeyboardControls>
       <Loader />
+      <ActionFSystem />
       <HUD />
       <TreeInspectPopup />
       <DevPanel />
