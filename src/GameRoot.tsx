@@ -1,10 +1,9 @@
-import { Suspense, useEffect } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import {
   AdaptiveDpr,
   AdaptiveEvents,
   KeyboardControls,
-  Loader,
   PointerLockControls,
   Stats,
 } from "@react-three/drei";
@@ -42,6 +41,8 @@ import StonePickups from "./world/StonePickups";
 import Arrows from "./world/Arrows";
 import WorldBounds from "./world/WorldBounds";
 import Campfires from "./world/Campfires";
+import SturdyFrames from "./world/SturdyFrames";
+import SturdyPlacementPreview from "./world/SturdyPlacementPreview";
 import HUD from "./ui/HUD";
 import TreeInspectPopup from "./ui/TreeInspectPopup";
 import DevPanel from "./ui/DevPanel";
@@ -51,6 +52,8 @@ import ARSessionPanel from "./ui/ARSessionPanel";
 import type { DeviceMode } from "./deviceMode";
 import { controlsMap } from "./player/usePlayerControls";
 import { xrStore } from "./xrStore";
+import { sturdyFrames } from "./systems/world/sturdyFrames";
+import GameBootLoader from "./ui/GameBootLoader";
 
 import "./systems/world/groundState";
 import { unlockGameAudio } from "./systems/audio/gameAudio";
@@ -83,6 +86,17 @@ export default function GameRoot({
     return () =>
       window.removeEventListener("pointerdown", up, { capture: true });
   }, []);
+
+  const [hasShelterInWorld, setHasShelterInWorld] = useState(
+    () => sturdyFrames.list().length > 0,
+  );
+  useEffect(
+    () =>
+      sturdyFrames.subscribe(() => {
+        setHasShelterInWorld(sturdyFrames.list().length > 0);
+      }),
+    [],
+  );
 
   const shellClass =
     deviceMode === "tablet"
@@ -124,6 +138,7 @@ export default function GameRoot({
               <Physics gravity={[0, -22, 0]} debug={debug}>
                 <WorldBounds />
                 <Ground />
+                <SturdyPlacementPreview />
                 <Lake />
                 <SnakeDen />
                 <Trees />
@@ -154,6 +169,11 @@ export default function GameRoot({
                 <Suspense fallback={null}>
                   <Arrows />
                 </Suspense>
+                {hasShelterInWorld && (
+                  <Suspense fallback={null}>
+                    <SturdyFrames />
+                  </Suspense>
+                )}
                 <Player />
                 <HeldAxe />
                 <ChopSystem />
@@ -177,7 +197,7 @@ export default function GameRoot({
           </Canvas>
         </div>
       </KeyboardControls>
-      <Loader />
+      <GameBootLoader />
       <ActionFSystem />
       <HUD />
       <TreeInspectPopup />

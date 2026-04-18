@@ -17,6 +17,9 @@ import { HAND_OFFSET } from "./firstPersonHand";
 /** Static asset: `public/models/axe/axe.glb` */
 const AXE_URL = "/models/axe/axe.glb";
 
+/** Start fetch/decode as soon as this module loads so the mesh is ready at boot, not after other FBX work. */
+useGLTF.preload(AXE_URL);
+
 function ProceduralAxe() {
   return (
     <group>
@@ -32,10 +35,10 @@ function ProceduralAxe() {
   );
 }
 
-/** Simple right-hand grip in front of the axe handle. */
+/** Simple right-hand grip at the handle root (local origin after grip alignment). */
 function ProceduralHand() {
   return (
-    <group position={[0.02, -0.02, 0.04]} rotation={[0.15, -0.2, 0.08]}>
+    <group position={[0.01, -0.02, 0.03]} rotation={[0.12, 0.18, 0.06]}>
       <mesh castShadow position={[0, -0.02, 0.02]}>
         <boxGeometry args={[0.1, 0.09, 0.12]} />
         <meshStandardMaterial color="#c49a7c" roughness={0.75} />
@@ -84,6 +87,22 @@ function AxeModel() {
         o.castShadow = true;
         o.receiveShadow = true;
         o.frustumCulled = false;
+        const mats = Array.isArray(o.material)
+          ? o.material
+          : [o.material];
+        for (const m of mats) {
+          const mat = m as THREE.MeshStandardMaterial;
+          if (mat.map) {
+            mat.map.colorSpace = THREE.SRGBColorSpace;
+            mat.map.anisotropy = Math.max(mat.map.anisotropy, 4);
+          }
+          if (mat.normalMap) {
+            mat.normalMap.colorSpace = THREE.NoColorSpace;
+          }
+          if (mat.metalnessMap) mat.metalnessMap.colorSpace = THREE.NoColorSpace;
+          if (mat.roughnessMap) mat.roughnessMap.colorSpace = THREE.NoColorSpace;
+          mat.needsUpdate = true;
+        }
       }
     });
     clone.updateMatrixWorld(true);
@@ -97,6 +116,11 @@ function AxeModel() {
     const b2 = new THREE.Box3().setFromObject(clone);
     const c = b2.getCenter(new THREE.Vector3());
     clone.position.sub(c);
+    // Grip: shift along local X so the handle end sits at the hand origin (see axeOrientation).
+    clone.updateMatrixWorld(true);
+    const b3 = new THREE.Box3().setFromObject(clone);
+    clone.position.x -= b3.max.x;
+    clone.updateMatrixWorld(true);
     return clone;
   }, [scene]);
 
@@ -141,7 +165,6 @@ export default function HeldAxe() {
 
   return (
     <group ref={rigRef}>
-      <ProceduralHand />
       <group rotation={[0, 0.08, 0]}>
         <group
           rotation={[
@@ -150,6 +173,7 @@ export default function HeldAxe() {
             AXE_ORIENTATION_RAD[2],
           ]}
         >
+          <ProceduralHand />
           <Suspense fallback={<ProceduralAxe />}>
             <AxeLoadErrorBoundary>
               <AxeModel />

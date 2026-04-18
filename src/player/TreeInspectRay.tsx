@@ -11,8 +11,6 @@ import {
   setTreeInspectTarget,
 } from "../systems/ui/treeInspectState";
 import { worldState } from "../systems/world/worldState";
-import { handWorldPosition } from "./firstPersonHand";
-
 /** Only show the popup when the trunk is within this ray length (world units). */
 const INSPECT_RAY_LEN = 3.05;
 
@@ -51,7 +49,7 @@ export default function TreeInspectRay() {
 
     camera.getWorldDirection(dir.current);
     const o = origin.current;
-    handWorldPosition(camera, o);
+    camera.getWorldPosition(o);
 
     const ray = new rapier.Ray(
       { x: o.x, y: o.y, z: o.z },

@@ -264,6 +264,14 @@ export default function DevPanel() {
           >
             Give arrows
           </button>
+          <button
+            type="button"
+            onClick={() => {
+              inventory.add("sturdy_frame", 1);
+            }}
+          >
+            Give sturdy shelter kit
+          </button>
         </div>
       </section>
     </div>

@@ -42,7 +42,24 @@ import {
 } from "../systems/world/campfireCooking";
 import { playBagZipSfx } from "../systems/audio/gameAudio";
 import { releasePointerLockForUI } from "../systems/ui/pointerLock";
+import {
+  isSturdyPlacementMode,
+  setSturdyPlacementMode,
+  subscribeSturdyPlacement,
+} from "../systems/ui/sturdyPlacementState";
 import WeatherIcon from "./WeatherIcon";
+
+function useSturdyPlacementMode(): boolean {
+  const [on, setOn] = useState(isSturdyPlacementMode);
+  useEffect(
+    () =>
+      subscribeSturdyPlacement(() => {
+        setOn(isSturdyPlacementMode());
+      }),
+    [],
+  );
+  return on;
+}
 import Compass from "./Compass";
 
 /** Put your sticks artwork at `public/images/inventory/sticks-bundle.png`. */
@@ -236,6 +253,7 @@ export default function HUD() {
   const [weatherTick, setWeatherTick] = useState(0);
   const [grillFireId, setGrillFireId] = useState<number | null>(null);
   const [grillOpen, setGrillOpenState] = useState(isCampfireGrillOpen);
+  const sturdyPlacement = useSturdyPlacementMode();
 
   useEffect(() => {
     return subscribeCampfireGrill(() =>
@@ -283,6 +301,10 @@ export default function HUD() {
   }, [hp.dead]);
 
   useEffect(() => {
+    if (hp.dead) setSturdyPlacementMode(false);
+  }, [hp.dead]);
+
+  useEffect(() => {
     if (hp.dead) releasePointerLockForUI();
   }, [hp.dead]);
 
@@ -312,6 +334,11 @@ export default function HUD() {
       if (e.code === "Escape" && isCampfireGrillOpen()) {
         e.preventDefault();
         setCampfireGrillOpen(false);
+        return;
+      }
+      if (e.code === "Escape" && isSturdyPlacementMode()) {
+        e.preventDefault();
+        setSturdyPlacementMode(false);
         return;
       }
       if (e.code === "Escape" && isBackpackOpen()) {
@@ -388,6 +415,17 @@ export default function HUD() {
           <div>
             <kbd>F</kbd> place campfire
           </div>
+          {sturdyPlacement ? (
+            <div>
+              <strong>Sturdy placement</strong> — green ring = OK ·{" "}
+              <kbd>LMB</kbd> confirm · <kbd>C</kbd> / <kbd>Esc</kbd> cancel
+            </div>
+          ) : (
+            <div>
+              <kbd>C</kbd> sturdy kit preview (crafts if you have no kit but have
+              resources)
+            </div>
+          )}
           <div>
             <kbd>G</kbd> open / close fire grill (near fire)
           </div>
@@ -427,6 +465,7 @@ export default function HUD() {
                 const isStick = row === 0 && col === 0;
                 const isStone = row === 0 && col === 1;
                 const isArrow = row === 0 && col === 7;
+                const isSturdy = row === 0 && col === 8;
                 const mineralIndex =
                   row === 0 &&
                   col >= 2 &&
@@ -445,6 +484,7 @@ export default function HUD() {
                   isStick ||
                   isStone ||
                   isArrow ||
+                  isSturdy ||
                   mineralKey !== null ||
                   meat !== null;
                 const qty = isStick
@@ -453,11 +493,13 @@ export default function HUD() {
                     ? inv.stone
                     : isArrow
                       ? inv.arrow
-                      : mineralKey
-                      ? inv[mineralKey]
-                      : meat
-                        ? inv[meat.key]
-                        : 0;
+                      : isSturdy
+                        ? inv.sturdy_frame
+                        : mineralKey
+                          ? inv[mineralKey]
+                          : meat
+                            ? inv[meat.key]
+                            : 0;
                 const filled = reserved && qty > 0;
                 const title = isStick
                   ? "Sticks"
@@ -465,11 +507,13 @@ export default function HUD() {
                     ? "Stone"
                     : isArrow
                       ? "Arrows"
-                      : mineralKey
-                      ? MINERAL_NAMES[mineralIndex]
-                      : meat
-                        ? meat.title
-                        : `Slot ${row + 1},${col + 1}`;
+                      : isSturdy
+                        ? "Sturdy shelter kit (B to place)"
+                        : mineralKey
+                          ? MINERAL_NAMES[mineralIndex]
+                          : meat
+                            ? meat.title
+                            : `Slot ${row + 1},${col + 1}`;
                 return (
                   <div
                     key={i}
@@ -486,6 +530,11 @@ export default function HUD() {
                     ) : isArrow ? (
                       <>
                         <span className="backpack-cell__name">Arr</span>
+                        <span className="backpack-cell__qty mono">{qty}</span>
+                      </>
+                    ) : isSturdy ? (
+                      <>
+                        <span className="backpack-cell__name">Kit</span>
                         <span className="backpack-cell__qty mono">{qty}</span>
                       </>
                     ) : mineralKey && mineralIndex >= 0 ? (

@@ -4,6 +4,15 @@ import { playerRef } from "../systems/player/playerRef";
 import { inventory, type InventoryItem } from "../systems/player/inventory";
 import { campfires } from "../systems/world/campfires";
 import { CAMPFIRE_INTERACT_RADIUS } from "../systems/world/campfireCooking";
+import {
+  MAX_STURDY_INVENTORY,
+  STURDY_CRAFT_STICKS,
+  STURDY_CRAFT_STONES,
+} from "../systems/world/sturdyCraftConstants";
+import {
+  isSturdyPlacementMode,
+  setSturdyPlacementMode,
+} from "../systems/ui/sturdyPlacementState";
 import { isBackpackOpen, setBackpackOpen } from "../systems/ui/backpackState";
 import {
   isCampfireGrillOpen,
@@ -18,6 +27,7 @@ const STONES_COST = 6;
 const PLACE_FORWARD = 1.65;
 const GRILL_COOLDOWN_MS = 280;
 const PLACE_FIRE_COOLDOWN_MS = 320;
+const CRAFT_STURDY_COOLDOWN_MS = 420;
 const EAT_COOLDOWN_MS = 650;
 const DRINK_COOLDOWN_MS = 550;
 
@@ -33,13 +43,15 @@ const HEAL_DRINK = 10;
 const WATER_FROM_DRINK = 42;
 
 /**
- * Separate keys: G grill, V drink, E eat, F place campfire (no overlap).
+ * Separate keys: G grill, V drink, E eat, C sturdy kit preview (craft if needed),
+ * F campfire (no overlap with backpack; G works when backpack open).
  */
 export default function ActionFSystem() {
   const lastGrill = useRef(0);
   const lastDrink = useRef(0);
   const lastEat = useRef(0);
   const lastPlaceFire = useRef(0);
+  const lastCraftSturdy = useRef(0);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -100,6 +112,41 @@ export default function ActionFSystem() {
         return;
       }
 
+      if (e.code === "KeyC") {
+        if (!ptr) return;
+        if (isSturdyPlacementMode()) {
+          e.preventDefault();
+          setSturdyPlacementMode(false);
+          return;
+        }
+        const inv = inventory.get();
+        const hasKit = inv.sturdy_frame >= 1;
+        const canCraft =
+          inv.sturdy_frame < MAX_STURDY_INVENTORY &&
+          inv.stick >= STURDY_CRAFT_STICKS &&
+          inv.stone >= STURDY_CRAFT_STONES;
+        if (!hasKit && !canCraft) return;
+        if (
+          !hasKit &&
+          now - lastCraftSturdy.current < CRAFT_STURDY_COOLDOWN_MS
+        )
+          return;
+        e.preventDefault();
+        if (!hasKit && canCraft) {
+          if (
+            !inventory.tryConsume({
+              stick: STURDY_CRAFT_STICKS,
+              stone: STURDY_CRAFT_STONES,
+            })
+          )
+            return;
+          inventory.add("sturdy_frame", 1);
+          lastCraftSturdy.current = now;
+        }
+        setSturdyPlacementMode(true);
+        return;
+      }
+
       if (e.code === "KeyF") {
         if (!ptr) return;
         if (fireHere) return;
@@ -122,6 +169,7 @@ export default function ActionFSystem() {
         lastPlaceFire.current = now;
         return;
       }
+
     };
 
     window.addEventListener("keydown", onKey, true);

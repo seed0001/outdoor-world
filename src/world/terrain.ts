@@ -69,6 +69,38 @@ export function heightAt(x: number, z: number): number {
   return lerp(grass, desert, t);
 }
 
+/**
+ * Intersect a world ray with the analytic heightfield {@link heightAt}.
+ * Returns a point on the surface, or null if the ray stays above terrain within `maxDist`.
+ */
+export function terrainRayHit(
+  ox: number,
+  oy: number,
+  oz: number,
+  dx: number,
+  dy: number,
+  dz: number,
+  maxDist: number,
+): { x: number; y: number; z: number } | null {
+  const len = Math.hypot(dx, dy, dz);
+  if (len < 1e-8) return null;
+  const ndx = dx / len;
+  const ndy = dy / len;
+  const ndz = dz / len;
+  const STEPS = 112;
+  for (let i = 1; i <= STEPS; i++) {
+    const t = (i / STEPS) * maxDist;
+    const px = ox + ndx * t;
+    const py = oy + ndy * t;
+    const pz = oz + ndz * t;
+    const h = heightAt(px, pz);
+    if (py <= h + 0.35) {
+      return { x: px, y: h, z: pz };
+    }
+  }
+  return null;
+}
+
 /** True when (x,z) is inside the lake disk (plus optional buffer). */
 export function insideLake(x: number, z: number, buffer = 0): boolean {
   const dx = x - LAKE_CENTER_X;

@@ -13,13 +13,19 @@ import { trees as treeList } from "../systems/world/treeRegistry";
 import { getWeather } from "../systems/weather/weatherSystem";
 import { rocks as rockList } from "../systems/world/rockRegistry";
 import { isBackpackOpen } from "../systems/ui/backpackState";
+import {
+  isSturdyPlacementMode,
+  setSturdyPlacementMode,
+  sturdyPreviewTarget,
+} from "../systems/ui/sturdyPlacementState";
+import { sturdyFrames } from "../systems/world/sturdyFrames";
+import { insideLake } from "../world/terrain";
 import { playMiningRockSfx, playWoodChopSfx } from "../systems/audio/gameAudio";
 import { rayPickFauna } from "../systems/world/faunaPositions";
 import { killFauna } from "../systems/world/faunaLifecycle";
-import { handWorldPosition } from "./firstPersonHand";
-
 const RAY_LEN = 4.2;
 const CHOP_COOLDOWN = 0.48;
+const STURDY_PLACE_COOLDOWN = 0.42;
 const STANDING_TREE_HITS = 4;
 const FALLEN_TREE_HITS = 4;
 const LOG_HITS = 3;
@@ -47,8 +53,9 @@ export default function ChopSystem() {
   const dir = useRef(new THREE.Vector3());
   const origin = useRef(new THREE.Vector3());
   const cooldown = useRef(0);
+  const placeCooldown = useRef(0);
+  const placeWasDown = useRef(false);
   const mouseDown = useRef(false);
-  const wasDown = useRef(false);
 
   const treeChops = useRef(new Map<number, number>());
   const fallenChops = useRef(new Map<number, number>());
@@ -73,13 +80,38 @@ export default function ChopSystem() {
 
   useFrame((_, dt) => {
     cooldown.current = Math.max(0, cooldown.current - dt);
+    placeCooldown.current = Math.max(0, placeCooldown.current - dt);
 
     const locked = !!document.pointerLockElement;
-    const pressed = mouseDown.current && locked && !health.get().dead;
-    const edge = pressed && !wasDown.current;
-    wasDown.current = pressed;
+    const dead = health.get().dead;
+    const pressed = mouseDown.current && locked && !dead;
 
-    if (!edge || cooldown.current > 0) return;
+    if (isSturdyPlacementMode()) {
+      if (isBackpackOpen()) return;
+      const placeEdge = pressed && !placeWasDown.current;
+      placeWasDown.current = pressed;
+
+      if (
+        placeEdge &&
+        placeCooldown.current <= 0 &&
+        sturdyPreviewTarget.valid &&
+        inventory.get().sturdy_frame >= 1
+      ) {
+        placeCooldown.current = STURDY_PLACE_COOLDOWN;
+        const { x, y, z } = sturdyPreviewTarget;
+        if (insideLake(x, z, 2.2)) return;
+        if (!inventory.tryConsume({ sturdy_frame: 1 })) return;
+        if (!sturdyFrames.add(x, y, z, playerRef.heading)) {
+          inventory.add("sturdy_frame", 1);
+        } else {
+          setSturdyPlacementMode(false);
+        }
+      }
+      return;
+    }
+    placeWasDown.current = false;
+
+    if (!pressed || cooldown.current > 0) return;
     if (isBackpackOpen()) return;
 
     cooldown.current = CHOP_COOLDOWN;
@@ -89,7 +121,8 @@ export default function ChopSystem() {
 
     camera.getWorldDirection(dir.current);
     const o = origin.current;
-    handWorldPosition(camera, o);
+    // Align chop ray with the camera view (crosshair). Hand-only origin was missing trees you look at.
+    camera.getWorldPosition(o);
 
     const faunaHit = rayPickFauna(
       o.x,

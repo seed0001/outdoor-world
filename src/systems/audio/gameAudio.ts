@@ -20,6 +20,26 @@ bird.preload = "auto";
 night.preload = "auto";
 walk.preload = "auto";
 
+/** Pooled one-shots — many browsers handle `new Audio()` per swing poorly after autoplay rules. */
+let chopPool: HTMLAudioElement | null = null;
+let minePool: HTMLAudioElement | null = null;
+
+function chopOneShot(): HTMLAudioElement {
+  if (!chopPool) {
+    chopPool = new Audio(URL_AXE);
+    chopPool.preload = "auto";
+  }
+  return chopPool;
+}
+
+function mineOneShot(): HTMLAudioElement {
+  if (!minePool) {
+    minePool = new Audio(URL_PIXAXE_MINING);
+    minePool.preload = "auto";
+  }
+  return minePool;
+}
+
 /** Call once after user gesture so loops can play (browser autoplay policy). */
 export function unlockGameAudio() {
   if (unlocked) return;
@@ -30,6 +50,25 @@ export function unlockGameAudio() {
   void bird.play().catch(() => {});
   void night.play().catch(() => {});
   void walk.play().catch(() => {});
+  // Prime UI one-shots in the same user gesture so chop / mining reliably play later.
+  const ax = chopOneShot();
+  ax.volume = 0;
+  void ax
+    .play()
+    .then(() => {
+      ax.pause();
+      ax.currentTime = 0;
+    })
+    .catch(() => {});
+  const mx = mineOneShot();
+  mx.volume = 0;
+  void mx
+    .play()
+    .then(() => {
+      mx.pause();
+      mx.currentTime = 0;
+    })
+    .catch(() => {});
 }
 
 function clamp(x: number, lo: number, hi: number) {
@@ -64,8 +103,9 @@ export function playWoodChopSfx() {
   const now = performance.now();
   if (now - lastChopSfx < CHOP_SFX_COOLDOWN_MS) return;
   lastChopSfx = now;
-  const a = new Audio(URL_AXE);
+  const a = chopOneShot();
   a.volume = 0.55;
+  a.currentTime = 0;
   void a.play().catch(() => {});
 }
 
@@ -75,8 +115,9 @@ export function playMiningRockSfx() {
   const now = performance.now();
   if (now - lastChopSfx < CHOP_SFX_COOLDOWN_MS) return;
   lastChopSfx = now;
-  const a = new Audio(URL_PIXAXE_MINING);
+  const a = mineOneShot();
   a.volume = 0.52;
+  a.currentTime = 0;
   void a.play().catch(() => {});
 }
 

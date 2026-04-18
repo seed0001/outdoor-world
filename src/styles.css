@@ -1289,3 +1289,50 @@ canvas {
 .ar-session-panel__note {
   color: #ffb8a8;
 }
+
+/* Initial boot overlay (replaces drei Loader — cannot block forever on huge assets). */
+.game-boot-loader {
+  position: absolute;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(ellipse at 50% 28%, #1a2230 0%, #080a0e 58%);
+  pointer-events: auto;
+}
+
+.game-boot-loader__panel {
+  text-align: center;
+  min-width: 240px;
+  padding: 0 20px;
+}
+
+.game-boot-loader__title {
+  margin: 0 0 14px;
+  font-size: 1rem;
+  font-weight: 500;
+  color: #c4d2ea;
+  letter-spacing: 0.06em;
+}
+
+.game-boot-loader__track {
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.09);
+  overflow: hidden;
+}
+
+.game-boot-loader__bar {
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, #5fa3ff, #9b7dff);
+  transform-origin: left center;
+  transition: transform 0.18s ease;
+}
+
+.game-boot-loader__pct {
+  margin: 12px 0 0;
+  font-size: 0.78rem;
+  color: rgba(190, 205, 230, 0.55);
+}

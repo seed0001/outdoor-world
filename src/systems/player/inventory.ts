@@ -10,6 +10,8 @@ export type InventoryItem =
   | "stick"
   | "stone"
   | "arrow"
+  /** Crafted primitive shelter kit (Meshy “sturdy” FBX); place with B. */
+  | "sturdy_frame"
   | "raw_rat"
   | "raw_snake"
   | "raw_fish"
@@ -23,6 +25,7 @@ function emptyCounts(): Record<InventoryItem, number> {
     stick: 0,
     stone: 0,
     arrow: 0,
+    sturdy_frame: 0,
     raw_rat: 0,
     raw_snake: 0,
     raw_fish: 0,
