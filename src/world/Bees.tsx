@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
-import { useGLTF } from "@react-three/drei";
+import { useGLTF, useTexture } from "@react-three/drei";
 import { SkeletonUtils } from "three-stdlib";
 import { bees, type BeeSpec } from "../systems/world/beeRegistry";
 import { beeHiveInfo } from "../systems/world/beeHive";
@@ -11,6 +11,13 @@ import { worldState } from "../systems/world/worldState";
 import { heightAt, mulberry32 } from "./terrain";
 
 const MODEL_URL = "/models/bee/Bee.glb";
+
+/** Embedded PNGs extracted from `Bee.glb` — the glTF uses legacy spec/gloss and leaves `map` unset in current Three loaders. */
+const BEE_TEX_URLS = [
+  "/models/bee/textures/bee_diffuse.png",
+  "/models/bee/textures/bee_occlusion.png",
+  "/models/bee/textures/bee_normal.png",
+] as const;
 
 /** Horizontal distance from hive trunk — inside this, bees attack. */
 const HIVE_THREAT_RADIUS = 10.5;
@@ -33,6 +40,20 @@ export default function Bees() {
     animations: THREE.AnimationClip[];
   };
 
+  const beeTextures = useTexture([...BEE_TEX_URLS]);
+  const diffuse = (Array.isArray(beeTextures) ? beeTextures : [beeTextures])[0] as THREE.Texture;
+  const occlusion = (Array.isArray(beeTextures) ? beeTextures : [beeTextures])[1] as THREE.Texture;
+  const normal = (Array.isArray(beeTextures) ? beeTextures : [beeTextures])[2] as THREE.Texture;
+
+  useLayoutEffect(() => {
+    diffuse.colorSpace = THREE.SRGBColorSpace;
+    diffuse.anisotropy = Math.max(diffuse.anisotropy, 8);
+    occlusion.colorSpace = THREE.NoColorSpace;
+    occlusion.anisotropy = Math.max(occlusion.anisotropy, 8);
+    normal.colorSpace = THREE.NoColorSpace;
+    normal.anisotropy = Math.max(normal.anisotropy, 8);
+  }, [diffuse, occlusion, normal]);
+
   const baseScale = useMemo(() => {
     const box = new THREE.Box3().setFromObject(gltf.scene);
     const size = new THREE.Vector3();
@@ -52,6 +73,9 @@ export default function Bees() {
           template={gltf.scene}
           clips={gltf.animations}
           baseScale={baseScale}
+          diffuse={diffuse}
+          occlusion={occlusion}
+          normal={normal}
         />
       ))}
     </group>
@@ -145,11 +169,17 @@ function OneBee({
   template,
   clips,
   baseScale,
+  diffuse,
+  occlusion,
+  normal,
 }: {
   spec: BeeSpec;
   template: THREE.Group;
   clips: THREE.AnimationClip[];
   baseScale: number;
+  diffuse: THREE.Texture;
+  occlusion: THREE.Texture;
+  normal: THREE.Texture;
 }) {
   const groupRef = useRef<THREE.Group>(null);
   const mixerRef = useRef<THREE.AnimationMixer | null>(null);
@@ -166,13 +196,15 @@ function OneBee({
         mesh.frustumCulled = false;
         if (mesh.material) {
           const src = mesh.material as THREE.Material | THREE.Material[];
-          if (Array.isArray(src)) src.forEach(fixBeeMaterial);
-          else fixBeeMaterial(src);
+          if (Array.isArray(src)) {
+            for (const mat of src)
+              applyBeeMaps(mat, { diffuse, occlusion, normal });
+          } else applyBeeMaps(src, { diffuse, occlusion, normal });
         }
       }
     });
     return cloned;
-  }, [template]);
+  }, [template, diffuse, occlusion, normal]);
 
   useEffect(() => {
     if (clips.length === 0) {
@@ -291,50 +323,56 @@ function OneBee({
   );
 }
 
-function fixBeeMaterial(m: THREE.Material): void {
+/**
+ * Applies embedded diffuse / AO / normal from `public/models/bee/textures/*`.
+ * The source GLB uses spec/gloss + empty MR params so the loader never binds {@link MeshStandardMaterial.map}.
+ */
+function applyBeeMaps(
+  m: THREE.Material,
+  tex: {
+    diffuse: THREE.Texture;
+    occlusion: THREE.Texture;
+    normal: THREE.Texture;
+  },
+): void {
   m.needsUpdate = true;
   m.depthWrite = true;
 
-  if (m instanceof THREE.MeshPhysicalMaterial) {
-    m.transmission = 0;
-    m.thickness = 0;
-    m.attenuationDistance = Infinity;
-    m.ior = 1.5;
+  if (
+    !(m instanceof THREE.MeshStandardMaterial) &&
+    !(m instanceof THREE.MeshPhysicalMaterial)
+  ) {
+    return;
   }
 
-  if (m instanceof THREE.MeshStandardMaterial) {
-    const setTex = (tex: THREE.Texture | null | undefined, cs: THREE.ColorSpace) => {
-      if (tex) {
-        tex.colorSpace = cs;
-        tex.needsUpdate = true;
-      }
-    };
-    setTex(m.map, THREE.SRGBColorSpace);
-    setTex(m.emissiveMap, THREE.SRGBColorSpace);
-    setTex(m.normalMap, THREE.LinearSRGBColorSpace);
-    setTex(m.metalnessMap, THREE.LinearSRGBColorSpace);
-    setTex(m.roughnessMap, THREE.LinearSRGBColorSpace);
-    setTex(m.aoMap, THREE.LinearSRGBColorSpace);
-    setTex(m.alphaMap, THREE.LinearSRGBColorSpace);
-    if (m.map) m.map.anisotropy = Math.max(m.map.anisotropy, 8);
+  const mat = m as THREE.MeshPhysicalMaterial;
+  mat.transmission = 0;
+  mat.thickness = 0;
+  mat.attenuationDistance = Infinity;
+  mat.clearcoat = 0;
+  mat.map = tex.diffuse;
+  mat.aoMap = tex.occlusion;
+  mat.aoMapIntensity = 1;
+  mat.normalMap = tex.normal;
+  mat.normalScale = new THREE.Vector2(0.9, 0.9);
+  mat.metalness = 0.12;
+  mat.roughness = 0.58;
+  mat.envMapIntensity = Math.min(mat.envMapIntensity ?? 1, 0.82);
 
-    if (m.metalness > 0.6) m.metalness = Math.min(m.metalness, 0.25);
-    if (m.roughness < 0.35) m.roughness = Math.max(m.roughness, 0.55);
-    m.envMapIntensity = Math.min(m.envMapIntensity ?? 1, 0.85);
+  mat.side = THREE.DoubleSide;
 
-    const wantsBlend =
-      m.transparent ||
-      m.opacity < 0.999 ||
-      m.alphaMap != null ||
-      (m.map != null && m.map.format === THREE.RGBAFormat);
+  if (mat.emissiveMap) mat.emissiveMap.colorSpace = THREE.SRGBColorSpace;
 
-    if (wantsBlend) {
-      m.alphaTest = 0.35;
-      m.transparent = false;
-      m.opacity = 1;
-    } else {
-      m.transparent = false;
-      m.opacity = 1;
-    }
+  const wantsBlend =
+    mat.map != null && mat.map.format === THREE.RGBAFormat;
+
+  if (wantsBlend) {
+    mat.alphaTest = 0.35;
+    mat.transparent = false;
+    mat.opacity = 1;
+  } else {
+    mat.transparent = false;
+    mat.opacity = 1;
+    mat.alphaTest = 0;
   }
 }

@@ -1,4 +1,11 @@
-import { HALF, heightAt, insideLake, mulberry32 } from "../../world/terrain";
+import {
+  HALF_X,
+  WORLD_MAX_Z,
+  GRASS_BIOME_Z_MIN,
+  heightAt,
+  insideLake,
+  mulberry32,
+} from "../../world/terrain";
 import { BUTTERFLY_PLACEMENT_SEED } from "./worldSeed";
 
 export interface ButterflySpec {
@@ -33,8 +40,11 @@ function generate(): ButterflySpec[] {
   const out: ButterflySpec[] = [];
   let guard = 0;
   while (out.length < BUTTERFLY_COUNT && guard++ < BUTTERFLY_COUNT * 30) {
-    const homeX = (rand() - 0.5) * 2 * (HALF - MARGIN);
-    const homeZ = (rand() - 0.5) * 2 * (HALF - MARGIN);
+    const homeX = (rand() - 0.5) * 2 * (HALF_X - MARGIN);
+    const homeZ =
+      GRASS_BIOME_Z_MIN +
+      MARGIN +
+      rand() * (WORLD_MAX_Z - GRASS_BIOME_Z_MIN - 2 * MARGIN);
     if (Math.hypot(homeX, homeZ) < MIN_DIST_FROM_SPAWN) continue;
     if (insideLake(homeX, homeZ, 4)) continue;
 

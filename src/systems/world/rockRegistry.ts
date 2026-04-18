@@ -1,4 +1,11 @@
-import { HALF, heightAt, insideLake, mulberry32 } from "../../world/terrain";
+import {
+  HALF_X,
+  WORLD_MIN_Z,
+  WORLD_MAX_Z,
+  heightAt,
+  insideLake,
+  mulberry32,
+} from "../../world/terrain";
 import { nearSnakeDen } from "./snakeDen";
 import { mineralVeinFromRockId, type MineralKind } from "./mineralRegistry";
 
@@ -26,8 +33,11 @@ function generate(): RockSpec[] {
   const out: RockSpec[] = [];
   let guard = 0;
   while (out.length < ROCK_COUNT && guard++ < ROCK_COUNT * 20) {
-    const x = (rand() - 0.5) * 2 * (HALF - MARGIN);
-    const z = (rand() - 0.5) * 2 * (HALF - MARGIN);
+    const x = (rand() - 0.5) * 2 * (HALF_X - MARGIN);
+    const z =
+      WORLD_MIN_Z +
+      MARGIN +
+      rand() * (WORLD_MAX_Z - WORLD_MIN_Z - 2 * MARGIN);
     if (Math.hypot(x, z) < MIN_DIST_FROM_SPAWN) continue;
     if (insideLake(x, z, 1.2)) continue;
     if (nearSnakeDen(x, z, 0)) continue;

@@ -8,6 +8,7 @@ import {
   type RapierRigidBody,
 } from "@react-three/rapier";
 import { heightAt } from "../world/terrain";
+import { useXR } from "@react-three/xr";
 import { usePlayerControlsGetter } from "./usePlayerControls";
 import { playerRef } from "../systems/player/playerRef";
 import { health, useHealth } from "../systems/player/health";
@@ -28,6 +29,7 @@ const RESPAWN_Y = -20;
 export default function Player() {
   const body = useRef<RapierRigidBody>(null);
   const { camera } = useThree();
+  const xrSession = useXR((s) => s.session);
   const { rapier, world } = useRapier();
   const getControls = usePlayerControlsGetter();
   const hp = useHealth();
@@ -106,7 +108,9 @@ export default function Player() {
     if (hp.dead) {
       // Freeze player while dead.
       rb.setLinvel({ x: 0, y: v.y, z: 0 }, true);
-      camera.position.set(pos.x, pos.y + EYE_OFFSET, pos.z);
+      if (xrSession == null) {
+        camera.position.set(pos.x, pos.y + EYE_OFFSET, pos.z);
+      }
       updateWalkingFoley({
         locked: false,
         grounded,
@@ -151,7 +155,9 @@ export default function Player() {
       );
     }
 
-    applyCamera(camera, pos, shakeOffset, state.clock.elapsedTime);
+    if (xrSession == null) {
+      applyCamera(camera, pos, shakeOffset, state.clock.elapsedTime);
+    }
     playerRef.shake = Math.max(0, playerRef.shake - dt * 2);
 
     const vNow = rb.linvel();

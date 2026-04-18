@@ -1,4 +1,10 @@
-import { HALF, insideLake, mulberry32 } from "../../world/terrain";
+import {
+  HALF_X,
+  WORLD_MIN_Z,
+  WORLD_MAX_Z,
+  insideLake,
+  mulberry32,
+} from "../../world/terrain";
 import { BEE_PLACEMENT_SEED } from "./worldSeed";
 import { beeHiveInfo } from "./beeHive";
 
@@ -30,7 +36,13 @@ function generate(): BeeSpec[] {
     const r = 0.35 + rand() * 3.8;
     let homeX = hx + Math.cos(a) * r;
     let homeZ = hz + Math.sin(a) * r;
-    if (Math.abs(homeX) > HALF - MARGIN || Math.abs(homeZ) > HALF - MARGIN) continue;
+    if (
+      Math.abs(homeX) > HALF_X - MARGIN ||
+      homeZ < WORLD_MIN_Z + MARGIN ||
+      homeZ > WORLD_MAX_Z - MARGIN
+    ) {
+      continue;
+    }
     if (insideLake(homeX, homeZ, 2.2)) continue;
 
     out.push({

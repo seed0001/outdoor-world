@@ -1,4 +1,11 @@
-import { HALF, heightAt, insideLake, mulberry32 } from "../../world/terrain";
+import {
+  HALF_X,
+  WORLD_MAX_Z,
+  GRASS_BIOME_Z_MIN,
+  heightAt,
+  insideLake,
+  mulberry32,
+} from "../../world/terrain";
 import { nearSnakeDen } from "./snakeDen";
 import { TREE_PLACEMENT_SEED } from "./worldSeed";
 
@@ -74,8 +81,11 @@ function generate(): TreeSpec[] {
   const out: TreeSpec[] = [];
   let guard = 0;
   while (out.length < TREE_COUNT && guard++ < TREE_COUNT * 30) {
-    const x = (rand() - 0.5) * 2 * (HALF - MARGIN);
-    const z = (rand() - 0.5) * 2 * (HALF - MARGIN);
+    const x = (rand() - 0.5) * 2 * (HALF_X - MARGIN);
+    const z =
+      GRASS_BIOME_Z_MIN +
+      MARGIN +
+      rand() * (WORLD_MAX_Z - GRASS_BIOME_Z_MIN - 2 * MARGIN);
     if (Math.hypot(x, z) < MIN_DIST_FROM_SPAWN) continue;
     if (insideLake(x, z, LAKE_SHORE_BUFFER)) continue;
     if (nearSnakeDen(x, z, 0)) continue;

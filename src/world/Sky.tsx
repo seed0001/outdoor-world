@@ -27,6 +27,8 @@ export default function Sky() {
   const starsGroupRef = useRef<THREE.Group>(null);
   const ambientRef = useRef<THREE.AmbientLight>(null);
   const hemiRef = useRef<THREE.HemisphereLight>(null);
+  /** Extra flat fill so terrain (no env map) doesn’t go black in heavy storms. */
+  const stormFillRef = useRef<THREE.AmbientLight>(null);
 
   const sunDir = useMemo(() => new THREE.Vector3(), []);
   const moonDir = useMemo(() => new THREE.Vector3(), []);
@@ -91,8 +93,14 @@ export default function Sky() {
       sun.target.position.set(0, 0, 0);
       sun.target.updateMatrixWorld();
       const baseIntensity = dayFactor * 2.6;
-      const sunAtten = 1 - THREE.MathUtils.clamp(cloudDarkness * 0.92, 0, 0.97);
-      sun.intensity = baseIntensity * sunAtten;
+      // Slightly softer than 0.92× so thunderstorm keeps a sliver of directional light.
+      const sunAtten = 1 - THREE.MathUtils.clamp(cloudDarkness * 0.82, 0, 0.94);
+      let sunInt = baseIntensity * sunAtten;
+      // Floor: fully dark albedo + no env map = “missing” ground under heavy clouds.
+      if (cloudDarkness > 0.55) {
+        sunInt = Math.max(sunInt, 0.38 * dayFactor + 0.06 * nightFactor);
+      }
+      sun.intensity = sunInt;
       const warmth = 1 - THREE.MathUtils.clamp(elev * 3, 0, 1);
       sun.color.copy(SUN_NOON).lerp(SUN_WARM, warmth);
       sun.castShadow = elev > 0.02 && cloudDarkness < 0.48;
@@ -144,17 +152,31 @@ export default function Sky() {
 
     // --- Ambient + hemisphere ---
     if (ambientRef.current) {
-      ambientRef.current.intensity =
+      let amb =
         (0.08 + dayFactor * 0.32) *
         (1 - THREE.MathUtils.clamp(cloudDarkness * 0.58, 0, 0.95));
+      if (cloudDarkness > 0.5) amb = Math.max(amb, 0.14 + dayFactor * 0.12);
+      ambientRef.current.intensity = amb;
       ambientRef.current.color
         .copy(AMBIENT_NIGHT)
         .lerp(AMBIENT_DAY, dayFactor);
     }
     if (hemiRef.current) {
-      hemiRef.current.intensity =
+      let hemi =
         (0.1 + dayFactor * 0.45) *
         (1 - THREE.MathUtils.clamp(cloudDarkness * 0.68, 0, 0.95));
+      if (cloudDarkness > 0.5) hemi = Math.max(hemi, 0.18 + dayFactor * 0.16);
+      hemiRef.current.intensity = hemi;
+    }
+    if (stormFillRef.current) {
+      const k = THREE.MathUtils.clamp(
+        (cloudDarkness - 0.42) / 0.55,
+        0,
+        1,
+      );
+      stormFillRef.current.intensity =
+        k * k * (0.12 + dayFactor * 0.14 + nightFactor * 0.05);
+      stormFillRef.current.color.copy(STORM_FOG).lerp(AMBIENT_DAY, dayFactor * 0.35);
     }
 
     // --- Fog color shift ---
@@ -200,6 +222,7 @@ export default function Sky() {
         ref={hemiRef}
         args={["#d6e6f5", "#3a5a2c", 0.45]}
       />
+      <ambientLight ref={stormFillRef} intensity={0} color={"#5a6470"} />
 
       <directionalLight
         ref={sunLightRef}

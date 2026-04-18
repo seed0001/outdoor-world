@@ -39,9 +39,12 @@ pnpm-debug.log*
 /bee/
 /colored-flower/
 /b-29-superfortress-over-exposed-crash-site/
+/rose-flower/
 
 # Loose copies at repo root (runtime assets live under public/)
 /arrow.glb
+/tree.glb
+/trees/
 /424251__seenms__bird-songs-in-forest.wav
 /nighttime.mp3
 /Meshy_AI_small_bundle_of_stick_0407140321_generate.fbx

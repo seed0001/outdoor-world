@@ -79,6 +79,9 @@ export function createGroundMaterial(): {
       `
         #include <color_fragment>
 
+        // South (negative Z) desert biome — mute grass tints, reduce snow / wet cues.
+        float desertBio = 1.0 - smoothstep(-178.0, -108.0, vWorldPosition.z);
+
         // Grass tint patches (world XZ) — lower frequencies = larger patches on terrain.
         vec2 gx = vWorldPosition.xz;
         float gN = vnoise(gx * 0.016);
@@ -100,7 +103,8 @@ export function createGroundMaterial(): {
           gT2 * 0.72
         );
         grassPatchTint = clamp(grassPatchTint, vec3(0.78), vec3(1.14));
-        diffuseColor.rgb *= mix(vec3(1.0), grassPatchTint, 0.68);
+        float grassMix = 0.68 * (1.0 - desertBio * 0.92);
+        diffuseColor.rgb *= mix(vec3(1.0), grassPatchTint, grassMix);
 
         float slope = clamp(vWorldNormal.y, 0.0, 1.0);
         float slopeMask = smoothstep(0.55, 0.9, slope);
@@ -113,7 +117,7 @@ export function createGroundMaterial(): {
         float elevBoost = smoothstep(3.0, 7.5, vWorldPosition.y);
 
         float snow = clamp(
-          (slopeMask * patchy + elevBoost * 0.6) * uSnowLevel * 1.2,
+          (slopeMask * patchy + elevBoost * 0.6) * uSnowLevel * 1.2 * (1.0 - desertBio * 0.95),
           0.0,
           1.0
         );
@@ -122,7 +126,7 @@ export function createGroundMaterial(): {
         diffuseColor.rgb = mix(diffuseColor.rgb, snowColor, snow);
 
         // Wet darkening (muds the grass, less effect on snow)
-        float wetMask = (1.0 - snow) * uWetness;
+        float wetMask = (1.0 - snow) * uWetness * (1.0 - desertBio * 0.85);
         diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * 0.55, wetMask);
       `,
     );
@@ -142,7 +146,7 @@ export function createGroundMaterial(): {
 
   // Ensure the material recompiles when uniforms change (three r3f handles
   // this automatically since it's the same material instance).
-  mat.customProgramCacheKey = () => "ground-seasonal-grass-patches-v2";
+  mat.customProgramCacheKey = () => "ground-seasonal-grass-desert-v1";
 
   return { material: mat, uniforms };
 }

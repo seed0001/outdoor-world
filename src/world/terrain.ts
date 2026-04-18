@@ -1,8 +1,20 @@
-export const WORLD_SIZE = 200;
-export const WORLD_SEGMENTS = 128;
-export const HALF = WORLD_SIZE / 2;
+export const WORLD_SIZE_X = 200;
+/** East/west half-extent (legacy `HALF` is this value). */
+export const HALF_X = WORLD_SIZE_X / 2;
+/** @deprecated Prefer HALF_X — kept for existing imports that mean “half width”. */
+export const HALF = HALF_X;
 
-// Lake geometry — a bowl carved into the terrain.
+/** World extends further south (negative Z) into a desert biome. */
+export const WORLD_MIN_Z = -300;
+export const WORLD_MAX_Z = 100;
+export const WORLD_SIZE_Z = WORLD_MAX_Z - WORLD_MIN_Z;
+/** Ground mesh is offset so local geometry still spans the same X range. */
+export const WORLD_CENTER_Z = (WORLD_MIN_Z + WORLD_MAX_Z) / 2;
+
+export const WORLD_SEGMENTS = 128;
+export const WORLD_SEGMENTS_Z = 160;
+
+// Lake geometry — a bowl carved into the terrain (temperate region only).
 export const LAKE_CENTER_X = -28;
 export const LAKE_CENTER_Z = 22;
 export const LAKE_OUTER_R = 22;
@@ -10,14 +22,18 @@ export const LAKE_INNER_R = 10;
 export const LAKE_WATER_Y = -0.3;
 export const LAKE_FLOOR_Y = -2.8;
 
+/** North of this Z: trees, lake ecology, flowers (roughly above desert transition). */
+export const GRASS_BIOME_Z_MIN = -88;
+
 /**
- * Cheap multi-octave pseudo-noise built from sin/cos. Good enough for
- * gentle rolling hills without pulling in a noise library. Deterministic
- * and continuous (C1), so normals behave. After the base heightfield we
- * carve the lake bowl with a smoothstep falloff so tree/rock placement
- * and physics stay in sync with the water's disk.
+ * 0 = temperate grass, 1 = full desert. Smooth band crossing “south” into the new map.
  */
-export function heightAt(x: number, z: number): number {
+export function desertBiomeBlend(z: number): number {
+  if (z > -105) return 0;
+  return smoothstep(-105, -178, z);
+}
+
+function heightGrassland(x: number, z: number): number {
   const a = Math.sin(x * 0.04) * Math.cos(z * 0.05) * 2.2;
   const b = Math.sin(x * 0.09 + 1.3) * Math.cos(z * 0.07 + 2.1) * 1.1;
   const c = Math.sin(x * 0.17 + 0.5) * Math.cos(z * 0.21 - 1.7) * 0.4;
@@ -28,11 +44,29 @@ export function heightAt(x: number, z: number): number {
   const lakeDz = z - LAKE_CENTER_Z;
   const lakeDist = Math.hypot(lakeDx, lakeDz);
   if (lakeDist < LAKE_OUTER_R) {
-    // t = 1 at centre, 0 at outer rim; inverted smoothstep.
     const t = smoothstep(LAKE_OUTER_R, LAKE_INNER_R, lakeDist);
     h = lerp(h, LAKE_FLOOR_Y, t);
   }
   return h;
+}
+
+/** Dunes / ergs — lower frequency, warmer base than grass hills. */
+function heightDesert(x: number, z: number): number {
+  const a = Math.sin(x * 0.052) * Math.cos(z * 0.045) * 3.1;
+  const b = Math.sin(x * 0.088 + 1.9) * Math.cos(z * 0.062 + 0.8) * 1.55;
+  const c = Math.sin((x + z * 0.62) * 0.032) * 2.4;
+  const d = Math.sin((x * 0.7 - z) * 0.018) * 0.85;
+  return a + b + c + d + 0.55;
+}
+
+/**
+ * Cheap multi-octave heightfield: temperate north, desert south, blended across a wide edge.
+ */
+export function heightAt(x: number, z: number): number {
+  const grass = heightGrassland(x, z);
+  const desert = heightDesert(x, z);
+  const t = desertBiomeBlend(z);
+  return lerp(grass, desert, t);
 }
 
 /** True when (x,z) is inside the lake disk (plus optional buffer). */

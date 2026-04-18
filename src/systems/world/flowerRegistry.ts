@@ -1,5 +1,7 @@
 import {
-  HALF,
+  HALF_X,
+  WORLD_MAX_Z,
+  GRASS_BIOME_Z_MIN,
   heightAt,
   belowLakeWaterLine,
   insideLake,
@@ -41,8 +43,11 @@ function generate(): FlowerSpec[] {
   // Cluster anchors — random patches on open terrain.
   let guard = 0;
   while (clusters.length < CLUSTER_COUNT && guard++ < CLUSTER_COUNT * 30) {
-    const x = (rand() - 0.5) * 2 * (HALF - MARGIN);
-    const z = (rand() - 0.5) * 2 * (HALF - MARGIN);
+    const x = (rand() - 0.5) * 2 * (HALF_X - MARGIN);
+    const z =
+      GRASS_BIOME_Z_MIN +
+      MARGIN +
+      rand() * (WORLD_MAX_Z - GRASS_BIOME_Z_MIN - 2 * MARGIN);
     if (Math.hypot(x, z) < MIN_DIST_FROM_SPAWN) continue;
     const radius = MIN_CLUSTER_RADIUS + rand() * (MAX_CLUSTER_RADIUS - MIN_CLUSTER_RADIUS);
     // Whole cluster disk must clear the lake bowl + shore (not just the anchor).

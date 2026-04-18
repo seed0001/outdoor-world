@@ -8,7 +8,7 @@ import { onCommand } from "../systems/world/commands";
 import { worldState } from "../systems/world/worldState";
 import { trees as treeList } from "../systems/world/treeRegistry";
 import { rocks as rockList } from "../systems/world/rockRegistry";
-import { HALF, heightAt } from "./terrain";
+import { HALF_X, heightAt } from "./terrain";
 
 const FUNNEL_RINGS = 40;
 const FUNNEL_SEGMENTS = 22;
@@ -35,7 +35,7 @@ function randomPathPoints(): {
 } {
   const angle = Math.random() * Math.PI * 2;
   const opposite = angle + Math.PI + (Math.random() - 0.5) * 0.6;
-  const edge = HALF - 4;
+  const edge = HALF_X - 4;
   const start = new THREE.Vector3(
     Math.cos(angle) * edge,
     0,

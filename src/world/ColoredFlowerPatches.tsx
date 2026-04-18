@@ -10,26 +10,25 @@ import {
 } from "../systems/world/coloredFlowerPatchRegistry";
 import { snapshot } from "../systems/world/worldClock";
 import { butterflyActivity, foliageLevel } from "../systems/world/calendar";
+import {
+  COLORED_FLOWER_TEXTURE_URLS,
+  COLORED_FLOWER_VARIANT_COUNT,
+} from "./coloredFlowerAssets";
+
+export { COLORED_FLOWER_TEXTURE_URLS } from "./coloredFlowerAssets";
 
 const FBX_URL = "/models/colored-flower/FlowerPatch.fbx";
 
-/** Diffuse maps from `public/models/colored-flower/textures/`. */
-export const COLORED_FLOWER_TEXTURE_URLS = [
-  "/models/colored-flower/textures/petal17.png",
-  "/models/colored-flower/textures/petal25.png",
-  "/models/colored-flower/textures/petal26.png",
-  "/models/colored-flower/textures/petal34.png",
-  "/models/colored-flower/textures/grass109.png",
-  "/models/colored-flower/textures/grass110.png",
-] as const;
+const TEXTURE_URL_LIST = [...COLORED_FLOWER_TEXTURE_URLS];
 
 /**
- * Six deterministic flower-bed patches (`colored-flower/source/Flower Patch.fbx`)
+ * Deterministic flower-bed patches (`FlowerPatch.fbx`) — one per diffuse variant,
  * with bundled PNGs; materials are rebuilt so paths work in the browser.
  */
 export default function ColoredFlowerPatches() {
   const fbx = useLoader(FBXLoader, FBX_URL);
-  const textures = useTexture([...COLORED_FLOWER_TEXTURE_URLS]);
+  // Stable array ref so useLoader/useTexture cache keys stay consistent across renders.
+  const textures = useTexture(TEXTURE_URL_LIST);
 
   useLayoutEffect(() => {
     const list = Array.isArray(textures) ? textures : [textures];
@@ -48,7 +47,7 @@ export default function ColoredFlowerPatches() {
           template={fbx}
           diffuse={
             (Array.isArray(textures) ? textures : [textures])[
-              spec.variant % COLORED_FLOWER_TEXTURE_URLS.length
+              spec.variant % COLORED_FLOWER_VARIANT_COUNT
             ]
           }
         />
@@ -76,7 +75,7 @@ function OnePatch({
     const size = new THREE.Vector3();
     box.getSize(size);
     const maxDim = Math.max(size.x, size.y, size.z, 1e-4);
-    const target = 2.4;
+    const target = 1.35;
     clone.scale.multiplyScalar(target / maxDim);
     clone.updateMatrixWorld(true);
     const b2 = new THREE.Box3().setFromObject(clone);
@@ -122,16 +121,12 @@ function OnePatch({
 }
 
 function buildPatchMaterial(
-  src: THREE.Material,
+  _src: THREE.Material,
   map: THREE.Texture,
 ): THREE.MeshStandardMaterial {
-  const color =
-    src instanceof THREE.MeshStandardMaterial
-      ? src.color.clone()
-      : src instanceof THREE.MeshLambertMaterial ||
-          src instanceof THREE.MeshPhongMaterial
-        ? src.color.clone()
-        : new THREE.Color(0xffffff);
+  // Always white: FBX materials often share one tint; it multiplies the diffuse map and
+  // makes every petal/grass texture read as the same muddy hue.
+  const color = new THREE.Color(0xffffff);
 
   const m = new THREE.MeshStandardMaterial({
     map,
