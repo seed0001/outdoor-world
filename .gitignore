@@ -36,6 +36,8 @@ pnpm-debug.log*
 /black-rat-free-download/
 
 # Local asset dumps (not used by the app)
+/bee/
+/colored-flower/
 /b-29-superfortress-over-exposed-crash-site/
 
 # Loose copies at repo root (runtime assets live under public/)

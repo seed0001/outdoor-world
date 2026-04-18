@@ -8,8 +8,8 @@ export interface GroundUniforms {
 
 /**
  * A MeshStandardMaterial patched to blend grass -> snow on upward-facing
- * surfaces, with patchy noise edges and elevation banding, and to darken
- * the surface when wet.
+ * surfaces, with patchy noise edges and elevation banding, varied grass-green
+ * patches in world space, and to darken the surface when wet.
  */
 export function createGroundMaterial(): {
   material: THREE.MeshStandardMaterial;
@@ -79,6 +79,29 @@ export function createGroundMaterial(): {
       `
         #include <color_fragment>
 
+        // Grass tint patches (world XZ) — lower frequencies = larger patches on terrain.
+        vec2 gx = vWorldPosition.xz;
+        float gN = vnoise(gx * 0.016);
+        gN += 0.55 * vnoise(gx * 0.042 + vec2(13.2, 7.1));
+        gN += 0.28 * vnoise(gx * 0.09 + vec2(1.0, 22.0));
+        gN /= 1.83;
+        float gM = vnoise(gx * 0.024 + vec2(40.0, 4.0));
+        float gK = vnoise(gx * 0.068 + vec2(-18.0, 60.0));
+        float gT = smoothstep(0.08, 0.92, gN);
+        float gT2 = smoothstep(0.15, 0.9, gM);
+        float gT3 = smoothstep(0.28, 0.82, gK);
+        vec3 warmTint = vec3(1.09, 0.98, 0.84);
+        vec3 coolTint = vec3(0.9, 1.06, 0.98);
+        vec3 oliveTint = vec3(0.92, 0.88, 0.72);
+        vec3 mossTint = vec3(0.86, 1.03, 0.91);
+        vec3 grassPatchTint = mix(
+          mix(warmTint, coolTint, gT),
+          mix(oliveTint, mossTint, gT3),
+          gT2 * 0.72
+        );
+        grassPatchTint = clamp(grassPatchTint, vec3(0.78), vec3(1.14));
+        diffuseColor.rgb *= mix(vec3(1.0), grassPatchTint, 0.68);
+
         float slope = clamp(vWorldNormal.y, 0.0, 1.0);
         float slopeMask = smoothstep(0.55, 0.9, slope);
 
@@ -119,7 +142,7 @@ export function createGroundMaterial(): {
 
   // Ensure the material recompiles when uniforms change (three r3f handles
   // this automatically since it's the same material instance).
-  mat.customProgramCacheKey = () => "ground-seasonal";
+  mat.customProgramCacheKey = () => "ground-seasonal-grass-patches-v2";
 
   return { material: mat, uniforms };
 }

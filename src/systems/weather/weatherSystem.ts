@@ -31,15 +31,15 @@ const BASE_TRANSITIONS: Record<WeatherType, Weights> = {
 /** Multipliers applied per season. Missing entries default to 0 (impossible). */
 type SeasonWeights = Partial<Record<WeatherType, number>>;
 const SEASON_MULT: Record<number, SeasonWeights> = {
-  // 0 Spring: wet and variable, occasional thunder/tornado late spring
+  // 0 Spring (Mar–May): wet and variable — no snow/blizzard (April shouldn’t blizzard).
   0: {
     clear: 1,
     cloudy: 1.2,
-    rain: 1.4,
+    rain: 1.5,
     hail: 0.4,
     thunderstorm: 0.7,
     tornado: 0.3,
-    snow: 0.2,
+    snow: 0,
     blizzard: 0,
   },
   // 1 Summer: mostly clear, dramatic thunderstorms, tornado season
@@ -184,7 +184,7 @@ function applyDerivedForType(t: WeatherType): Omit<
         windStrength: 1.1,
         lightningRate: 1.5, // ~1.5 strikes per in-game min
         cloudCoverage: 1,
-        cloudDarkness: 0.75,
+        cloudDarkness: 0.94,
         tempMod: -3,
       };
     case "snow":

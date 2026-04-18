@@ -81,8 +81,7 @@ export default function Lake() {
       (weather.rainRate * weather.intensity - uniforms.uRain.value) *
       Math.min(1, dt * 2);
     uniforms.uCloudDarkness.value +=
-      (weather.cloudDarkness * weather.intensity -
-        uniforms.uCloudDarkness.value) *
+      (weather.cloudDarkness - uniforms.uCloudDarkness.value) *
       Math.min(1, dt * 1);
 
     // Freeze accumulator: hardens when cold for a while, melts quickly above 2C.

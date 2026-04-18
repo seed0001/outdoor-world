@@ -55,8 +55,10 @@ export default function Sky() {
     const nightFactor = THREE.MathUtils.clamp(-elev * 3 + 0.05, 0, 1);
     const horizonFactor = Math.max(0, 1 - Math.abs(elev) * 6);
 
-    const cloudCoverage = weather.cloudCoverage * weather.intensity;
-    const cloudDarkness = weather.cloudDarkness * weather.intensity;
+    // Do not multiply by `weather.intensity`: that value dips during transitions and
+    // was wiping out storm darkening at the worst moments.
+    const cloudCoverage = weather.cloudCoverage;
+    const cloudDarkness = weather.cloudDarkness;
 
     // --- Sky shader uniforms ---
     const skyMesh = skyRef.current;
@@ -64,10 +66,21 @@ export default function Sky() {
       const u = skyMesh.material.uniforms;
       u.sunPosition.value.copy(sunDir).multiplyScalar(1000);
       u.turbidity.value =
-        2 + horizonFactor * 8 + nightFactor * 1 + cloudCoverage * 4;
-      u.rayleigh.value =
-        0.6 + horizonFactor * 3 + nightFactor * 0.5 + cloudCoverage * 1;
-      u.mieCoefficient.value = 0.004 + horizonFactor * 0.02;
+        2 +
+        horizonFactor * 8 +
+        nightFactor * 1 +
+        cloudCoverage * 4 +
+        cloudDarkness * 12;
+      u.rayleigh.value = Math.max(
+        0.12,
+        0.6 +
+          horizonFactor * 3 +
+          nightFactor * 0.5 +
+          cloudCoverage * 1 -
+          cloudDarkness * 0.85,
+      );
+      u.mieCoefficient.value =
+        0.004 + horizonFactor * 0.02 + cloudDarkness * 0.04;
       u.mieDirectionalG.value = 0.8;
     }
 
@@ -78,10 +91,11 @@ export default function Sky() {
       sun.target.position.set(0, 0, 0);
       sun.target.updateMatrixWorld();
       const baseIntensity = dayFactor * 2.6;
-      sun.intensity = baseIntensity * (1 - cloudDarkness * 0.75);
+      const sunAtten = 1 - THREE.MathUtils.clamp(cloudDarkness * 0.92, 0, 0.97);
+      sun.intensity = baseIntensity * sunAtten;
       const warmth = 1 - THREE.MathUtils.clamp(elev * 3, 0, 1);
       sun.color.copy(SUN_NOON).lerp(SUN_WARM, warmth);
-      sun.castShadow = elev > 0.02 && cloudDarkness < 0.5;
+      sun.castShadow = elev > 0.02 && cloudDarkness < 0.48;
       sun.visible = sun.intensity > 0.001;
     }
 
@@ -91,7 +105,8 @@ export default function Sky() {
       moon.position.copy(moonDir).multiplyScalar(80);
       moon.target.position.set(0, 0, 0);
       moon.target.updateMatrixWorld();
-      moon.intensity = nightFactor * 0.55 * (1 - cloudDarkness * 0.5);
+      moon.intensity =
+        nightFactor * 0.55 * (1 - THREE.MathUtils.clamp(cloudDarkness * 0.65, 0, 0.95));
       moon.visible = moon.intensity > 0.001;
     }
     const moonMesh = moonMeshRef.current;
@@ -130,14 +145,16 @@ export default function Sky() {
     // --- Ambient + hemisphere ---
     if (ambientRef.current) {
       ambientRef.current.intensity =
-        (0.08 + dayFactor * 0.32) * (1 - cloudDarkness * 0.3);
+        (0.08 + dayFactor * 0.32) *
+        (1 - THREE.MathUtils.clamp(cloudDarkness * 0.58, 0, 0.95));
       ambientRef.current.color
         .copy(AMBIENT_NIGHT)
         .lerp(AMBIENT_DAY, dayFactor);
     }
     if (hemiRef.current) {
       hemiRef.current.intensity =
-        (0.1 + dayFactor * 0.45) * (1 - cloudDarkness * 0.5);
+        (0.1 + dayFactor * 0.45) *
+        (1 - THREE.MathUtils.clamp(cloudDarkness * 0.68, 0, 0.95));
     }
 
     // --- Fog color shift ---
@@ -153,8 +170,7 @@ export default function Sky() {
         workColor.copy(NIGHT_FOG).lerp(DUSK_FOG, k);
       }
       if (cloudDarkness > 0) {
-        // Keep lerp moderate so terrain does not match fog and read as "missing".
-        workColor.lerp(STORM_FOG, cloudDarkness * 0.45);
+        workColor.lerp(STORM_FOG, cloudDarkness * 0.72);
       }
       fog.color.copy(workColor);
       const cc = THREE.MathUtils.clamp(cloudCoverage, 0, 1);

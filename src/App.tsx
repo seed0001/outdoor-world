@@ -19,7 +19,9 @@ import Snakes from "./world/Snakes";
 import Rats from "./world/Rats";
 import Fish from "./world/Fish";
 import Butterfly from "./world/Butterfly";
+import Bees from "./world/Bees";
 import Flowers from "./world/Flowers";
+import ColoredFlowerPatches from "./world/ColoredFlowerPatches";
 import Lake from "./world/Lake";
 import Clouds from "./world/Clouds";
 import Precipitation from "./world/Precipitation";
@@ -73,6 +75,9 @@ export default function App() {
           <Suspense fallback={null}>
             <Butterfly />
           </Suspense>
+          <Suspense fallback={null}>
+            <Bees />
+          </Suspense>
           <Physics gravity={[0, -22, 0]} debug={debug}>
             <WorldBounds />
             <Ground />
@@ -92,6 +97,9 @@ export default function App() {
             </Suspense>
             <Suspense fallback={null}>
               <Flowers />
+            </Suspense>
+            <Suspense fallback={null}>
+              <ColoredFlowerPatches />
             </Suspense>
             <StonePickups />
             <Suspense fallback={null}>

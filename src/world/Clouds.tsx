@@ -48,8 +48,8 @@ export default function Clouds() {
 
   useFrame((state) => {
     const weather = getWeather();
-    const coverage = weather.cloudCoverage * weather.intensity;
-    const darkness = weather.cloudDarkness * weather.intensity;
+    const coverage = weather.cloudCoverage;
+    const darkness = weather.cloudDarkness;
 
     const group = groupRef.current;
     if (!group) return;
