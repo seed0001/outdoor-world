@@ -5,6 +5,7 @@ import { getWeather } from "../weather/weatherSystem";
 import { health } from "./health";
 import { vitals, VITALS_MAX } from "./vitals";
 import { playerRef } from "./playerRef";
+import { isSurviveMode } from "../settings/playMode";
 
 export interface SurvivalState {
   /** Deg C: calendar `temperatureC` + elevation lapse + `weather.tempMod`. */
@@ -46,13 +47,18 @@ onTick((dtSimMs, snap) => {
   const dt = dtSimMs / 1000;
   if (dt <= 0) return;
 
-  vitals.tickFood(-FOOD_DRAIN_PER_SIM_SECOND, dt);
-
   feltTemperatureC = temperatureC(
     snap,
     playerRef.position.y,
     getWeather().tempMod,
   );
+
+  if (!isSurviveMode()) {
+    emit();
+    return;
+  }
+
+  vitals.tickFood(-FOOD_DRAIN_PER_SIM_SECOND, dt);
 
   const food = vitals.get().food;
   if (food <= 0) {

@@ -242,7 +242,11 @@ function formatClock(dayFrac: number): string {
   return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
 }
 
-export default function HUD() {
+export default function HUD({
+  showSurvivalVitals = true,
+}: {
+  showSurvivalVitals?: boolean;
+}) {
   const [locked, setLocked] = useState(false);
   const world = useWorldTime(4);
   const hp = useHealth();
@@ -418,6 +422,9 @@ export default function HUD() {
           <div>
             <kbd>F</kbd> place campfire
           </div>
+          <div>
+            <kbd>R</kbd> record view (again to stop)
+          </div>
           {sturdyPlacement ? (
             <div>
               <strong>Sturdy placement</strong> — green ring = OK ·{" "}
@@ -576,7 +583,12 @@ export default function HUD() {
       )}
 
       {locked && !hp.dead && (
-        <div className="hud-status-bars" aria-label="Health and vitals">
+        <div
+          className="hud-status-bars"
+          aria-label={
+            showSurvivalVitals ? "Health and vitals" : "Health (sim mode)"
+          }
+        >
           <div
             className="stat-bar stat-bar--health"
             title={`Health ${Math.round(hp.hp)} / ${hp.max}`}
@@ -594,51 +606,70 @@ export default function HUD() {
               </span>
             </div>
           </div>
-          <div
-            className="stat-bar stat-bar--food"
-            title={`Hunger ${Math.round(v.food)} / ${v.max}`}
-          >
-            <div
-              className="fill"
-              style={{
-                width: `${Math.min(100, Math.max(0, (v.food / v.max) * 100))}%`,
-              }}
-            />
-            <div className="stat-bar__meta">
-              <span className="stat-bar__tag">Eat</span>
-              <span className="stat-bar__num mono">{Math.round(v.food)}</span>
-            </div>
-          </div>
-          <div
-            className="stat-bar stat-bar--water"
-            title={`Thirst ${Math.round(v.water)} / ${v.max}`}
-          >
-            <div
-              className="fill"
-              style={{
-                width: `${Math.min(100, Math.max(0, (v.water / v.max) * 100))}%`,
-              }}
-            />
-            <div className="stat-bar__meta">
-              <span className="stat-bar__tag">H2O</span>
-              <span className="stat-bar__num mono">{Math.round(v.water)}</span>
-            </div>
-          </div>
-          <div
-            className="stat-bar stat-bar--sanity"
-            title={`Sanity ${Math.round(v.sanity)} / ${v.max}`}
-          >
-            <div
-              className="fill"
-              style={{
-                width: `${Math.min(100, Math.max(0, (v.sanity / v.max) * 100))}%`,
-              }}
-            />
-            <div className="stat-bar__meta">
-              <span className="stat-bar__tag">Mind</span>
-              <span className="stat-bar__num mono">{Math.round(v.sanity)}</span>
-            </div>
-          </div>
+          {showSurvivalVitals && (
+            <>
+              <div
+                className="stat-bar stat-bar--food"
+                title={`Hunger ${Math.round(v.food)} / ${v.max}`}
+              >
+                <div
+                  className="fill"
+                  style={{
+                    width: `${Math.min(
+                      100,
+                      Math.max(0, (v.food / v.max) * 100),
+                    )}%`,
+                  }}
+                />
+                <div className="stat-bar__meta">
+                  <span className="stat-bar__tag">Eat</span>
+                  <span className="stat-bar__num mono">
+                    {Math.round(v.food)}
+                  </span>
+                </div>
+              </div>
+              <div
+                className="stat-bar stat-bar--water"
+                title={`Thirst ${Math.round(v.water)} / ${v.max}`}
+              >
+                <div
+                  className="fill"
+                  style={{
+                    width: `${Math.min(
+                      100,
+                      Math.max(0, (v.water / v.max) * 100),
+                    )}%`,
+                  }}
+                />
+                <div className="stat-bar__meta">
+                  <span className="stat-bar__tag">H2O</span>
+                  <span className="stat-bar__num mono">
+                    {Math.round(v.water)}
+                  </span>
+                </div>
+              </div>
+              <div
+                className="stat-bar stat-bar--sanity"
+                title={`Sanity ${Math.round(v.sanity)} / ${v.max}`}
+              >
+                <div
+                  className="fill"
+                  style={{
+                    width: `${Math.min(
+                      100,
+                      Math.max(0, (v.sanity / v.max) * 100),
+                    )}%`,
+                  }}
+                />
+                <div className="stat-bar__meta">
+                  <span className="stat-bar__tag">Mind</span>
+                  <span className="stat-bar__num mono">
+                    {Math.round(v.sanity)}
+                  </span>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       )}
 

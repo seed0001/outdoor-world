@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import {
   AdaptiveDpr,
@@ -54,6 +54,12 @@ import { controlsMap } from "./player/usePlayerControls";
 import { xrStore } from "./xrStore";
 import { sturdyFrames } from "./systems/world/sturdyFrames";
 import GameBootLoader from "./ui/GameBootLoader";
+import ViewRecorder from "./ui/ViewRecorder";
+import {
+  configurePlayMode,
+  resetPlayMode,
+  type PlayMode,
+} from "./systems/settings/playMode";
 
 import "./systems/world/groundState";
 import "./systems/player/survival";
@@ -76,11 +82,19 @@ function TouchLookForTouchDevices({ deviceMode }: { deviceMode: DeviceMode }) {
 
 export default function GameRoot({
   deviceMode,
+  playMode,
   onExit,
 }: {
   deviceMode: DeviceMode;
+  playMode: PlayMode;
   onExit: () => void;
 }) {
+  configurePlayMode(playMode);
+
+  useEffect(() => () => resetPlayMode(), []);
+
+  const canvasWrapRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     const up = () => unlockGameAudio();
     window.addEventListener("pointerdown", up, { capture: true, once: true });
@@ -118,7 +132,7 @@ export default function GameRoot({
       </button>
 
       <KeyboardControls map={controlsMap}>
-        <div className="device-shell__canvas-wrap">
+        <div className="device-shell__canvas-wrap" ref={canvasWrapRef}>
           <Canvas
             shadows
             dpr={[1, 2]}
@@ -200,7 +214,8 @@ export default function GameRoot({
       </KeyboardControls>
       <GameBootLoader />
       <ActionFSystem />
-      <HUD />
+      <HUD showSurvivalVitals={playMode === "survive"} />
+      <ViewRecorder canvasWrapRef={canvasWrapRef} />
       <TreeInspectPopup />
       <DevPanel />
       <EcosystemPanel />

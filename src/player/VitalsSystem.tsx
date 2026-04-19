@@ -3,6 +3,7 @@ import { playerRef } from "../systems/player/playerRef";
 import { vitals } from "../systems/player/vitals";
 import { campfires } from "../systems/world/campfires";
 import { health } from "../systems/player/health";
+import { isSurviveMode } from "../systems/settings/playMode";
 
 /** Food drain is handled by `systems/player/survival.ts` (worldClock sim time). */
 const WATER_DRAIN = 0.092;
@@ -20,6 +21,7 @@ const WELL_FED_SANITY_BONUS = 0.035;
 
 export default function VitalsSystem() {
   useFrame((_, dt) => {
+    if (!isSurviveMode()) return;
     if (health.get().dead) return;
 
     const v = vitals.get();
