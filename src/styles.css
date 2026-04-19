@@ -1378,3 +1378,190 @@ canvas {
   font-size: 0.78rem;
   color: rgba(190, 205, 230, 0.55);
 }
+
+/* ── Title screen ─────────────────────────────────────────────────────────── */
+
+.title-screen__game-title {
+  font-size: clamp(2.4rem, 7vw, 4.5rem);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  background: linear-gradient(135deg, #c8e0ff 0%, #7eb8f7 55%, #a9d4ff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin: 0 0 0.25em;
+}
+
+.title-screen__grid {
+  max-width: 520px;
+}
+
+/* ── Season tracker (HUD) ─────────────────────────────────────────────────── */
+
+.season-tracker {
+  display: flex;
+  gap: 5px;
+  margin-top: 4px;
+}
+
+.season-tracker__dot {
+  font-size: 0.85rem;
+  opacity: 0.28;
+  transition: opacity 0.4s ease, transform 0.3s ease;
+  filter: grayscale(1);
+}
+
+.season-tracker__dot--done {
+  opacity: 0.95;
+  filter: grayscale(0);
+  transform: scale(1.1);
+}
+
+/* ── Run summary screen ───────────────────────────────────────────────────── */
+
+.run-summary {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(4, 8, 16, 0.7) 0%,
+    rgba(0, 0, 0, 0.92) 100%
+  );
+  backdrop-filter: blur(2px);
+  pointer-events: auto;
+}
+
+.run-summary__card {
+  background: rgba(10, 15, 25, 0.96);
+  border: 1px solid rgba(100, 130, 180, 0.18);
+  border-radius: 16px;
+  padding: 36px 40px 32px;
+  max-width: 440px;
+  width: calc(100% - 40px);
+  text-align: center;
+  box-shadow:
+    0 0 60px rgba(0, 0, 0, 0.8),
+    0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
+.run-summary__icon {
+  font-size: 2.8rem;
+  line-height: 1;
+  margin-bottom: 12px;
+}
+
+.run-summary__title {
+  margin: 0 0 6px;
+  font-size: 1.65rem;
+  font-weight: 700;
+  color: #dce8ff;
+  letter-spacing: 0.02em;
+}
+
+.run-summary__subtitle {
+  margin: 0 0 24px;
+  font-size: 0.92rem;
+  color: rgba(180, 200, 230, 0.65);
+}
+
+.run-summary__seasons {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.run-summary__season {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  opacity: 0.28;
+  filter: grayscale(1);
+  transition: opacity 0.35s, filter 0.35s;
+}
+
+.run-summary__season--done {
+  opacity: 1;
+  filter: grayscale(0);
+}
+
+.run-summary__season-icon {
+  font-size: 1.5rem;
+}
+
+.run-summary__season-label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(180, 200, 230, 0.7);
+}
+
+.run-summary__stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 16px;
+  margin-bottom: 28px;
+  text-align: left;
+}
+
+.run-summary__stat {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 6px;
+}
+
+.run-summary__stat-label {
+  font-size: 0.75rem;
+  color: rgba(180, 200, 230, 0.55);
+  white-space: nowrap;
+}
+
+.run-summary__stat-value {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #c8deff;
+}
+
+.run-summary__actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.run-summary__btn {
+  padding: 10px 24px;
+  border-radius: 8px;
+  border: 1px solid rgba(100, 130, 180, 0.3);
+  background: rgba(255, 255, 255, 0.06);
+  color: #b8ccee;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.run-summary__btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(140, 170, 220, 0.5);
+  color: #dce8ff;
+}
+
+.run-summary__btn--primary {
+  background: linear-gradient(135deg, #2a5fa8, #1e4a8a);
+  border-color: rgba(100, 160, 240, 0.45);
+  color: #dce8ff;
+}
+
+.run-summary__btn--primary:hover {
+  background: linear-gradient(135deg, #3470c0, #2558a8);
+  border-color: rgba(130, 180, 255, 0.6);
+}

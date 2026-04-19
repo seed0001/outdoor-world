@@ -60,6 +60,11 @@ export const vitals = {
     state = { ...state, sanity: clamp(state.sanity + amount) };
     emit();
   },
+  /** Restore specific vital values without going through tick logic. */
+  restoreFromSave(food: number, water: number, sanity: number): void {
+    state = { food: clamp(food), water: clamp(water), sanity: clamp(sanity), max: VITALS_MAX };
+    emit();
+  },
   subscribe(cb: () => void): () => void {
     listeners.add(cb);
     return () => {

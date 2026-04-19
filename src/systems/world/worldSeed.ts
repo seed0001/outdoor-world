@@ -18,3 +18,5 @@ export const BIRD_FLOCK_DEF_SEED = 99221;
 export const DESERT_TREE_PLACEMENT_SEED = 44219;
 /** Seeded placements for `tree.glb` in the same desert band (separate RNG stream). */
 export const DESERT_GLB_TREE_PLACEMENT_SEED = 52107;
+/** Frogs placed along the lake shoreline. */
+export const FROG_PLACEMENT_SEED = 33719;

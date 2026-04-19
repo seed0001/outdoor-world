@@ -54,6 +54,11 @@ export const health = {
     vitals.reset();
     emit();
   },
+  /** Restore a specific HP value without going through damage/heal logic. */
+  restoreFromSave(hp: number) {
+    state = { ...DEFAULT, hp: Math.max(1, Math.min(DEFAULT.max, hp)) };
+    emit();
+  },
   subscribe(cb: () => void): () => void {
     listeners.add(cb);
     return () => {

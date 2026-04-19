@@ -1,4 +1,6 @@
 import { Suspense, useEffect, useRef, useState } from "react";
+import Frogs from "./world/Frogs";
+import RunSummaryScreen from "./ui/RunSummaryScreen";
 import { Canvas } from "@react-three/fiber";
 import {
   AdaptiveDpr,
@@ -66,6 +68,17 @@ import "./systems/world/groundState";
 import "./systems/world/birdState";
 import "./systems/player/survival";
 import { unlockGameAudio } from "./systems/audio/gameAudio";
+import {
+  startRunGoalTracking,
+  stopRunGoalTracking,
+  runGoal,
+} from "./systems/world/runGoal";
+import { runStats } from "./systems/player/runStats";
+import { worldState } from "./systems/world/worldState";
+import { health } from "./systems/player/health";
+import { inventory } from "./systems/player/inventory";
+import { saveGame, consumePendingSave, applySave, clearSave } from "./systems/player/saveSystem";
+import { onTick } from "./systems/world/worldClock";
 
 const debug = new URLSearchParams(window.location.search).has("debug");
 
@@ -86,14 +99,51 @@ export default function GameRoot({
   deviceMode,
   playMode,
   onExit,
+  onRestart,
 }: {
   deviceMode: DeviceMode;
   playMode: PlayMode;
   onExit: () => void;
+  onRestart: () => void;
 }) {
   configurePlayMode(playMode);
 
   useEffect(() => () => resetPlayMode(), []);
+
+  // On mount: reset state for fresh run, then apply any pending save
+  useEffect(() => {
+    worldState.reset();
+    health.respawn();
+    inventory.reset();
+    runStats.reset();
+    runGoal.reset();
+
+    const save = consumePendingSave();
+    if (save) {
+      applySave(save);
+    } else {
+      runGoal.start();
+    }
+    startRunGoalTracking();
+
+    return () => {
+      stopRunGoalTracking();
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Auto-save every in-game day (only in survive mode)
+  useEffect(() => {
+    if (playMode !== "survive") return;
+    let lastDay = -1;
+    const unsub = onTick((_dt, snap) => {
+      if (lastDay !== -1 && snap.dayOfYear !== lastDay && !health.get().dead) {
+        saveGame(deviceMode, playMode);
+      }
+      lastDay = snap.dayOfYear;
+    });
+    return unsub;
+  }, [deviceMode, playMode]);
 
   const canvasWrapRef = useRef<HTMLDivElement>(null);
 
@@ -175,6 +225,9 @@ export default function GameRoot({
                   <Fish />
                 </Suspense>
                 <Suspense fallback={null}>
+                  <Frogs />
+                </Suspense>
+                <Suspense fallback={null}>
                   <Flowers />
                 </Suspense>
                 <Suspense fallback={null}>
@@ -217,7 +270,22 @@ export default function GameRoot({
       </KeyboardControls>
       <GameBootLoader />
       <ActionFSystem />
-      <HUD showSurvivalVitals={playMode === "survive"} />
+      <HUD
+        showSurvivalVitals={playMode === "survive"}
+        suppressDeathScreen={playMode === "survive"}
+      />
+      {playMode === "survive" && (
+        <RunSummaryScreen
+          onRestart={() => {
+            clearSave();
+            onRestart();
+          }}
+          onMainMenu={() => {
+            clearSave();
+            onExit();
+          }}
+        />
+      )}
       <ViewRecorder canvasWrapRef={canvasWrapRef} />
       <TreeInspectPopup />
       <DevPanel />

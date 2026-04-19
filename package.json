@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "compress:model": "gltf-transform metalrough",
+    "compress:models": "gltf-transform optimize public/models --texture-compress webp"
   },
   "dependencies": {
     "@dgreenheck/ez-tree": "file:./ez-tree",
@@ -19,6 +21,9 @@
     "three": "^0.184.0"
   },
   "devDependencies": {
+    "@gltf-transform/cli": "^4.3.0",
+    "@gltf-transform/core": "^4.3.0",
+    "@gltf-transform/functions": "^4.3.0",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@types/three": "^0.184.0",

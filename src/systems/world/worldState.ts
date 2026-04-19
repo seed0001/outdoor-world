@@ -2,6 +2,18 @@ import * as THREE from "three";
 import type { TreeKind } from "./treeRegistry";
 import type { MineralKind } from "./mineralRegistry";
 
+export interface WorldStateSaveData {
+  fallenTrees: FallenTreePayload[];
+  displacedRocks: DisplacedRockPayload[];
+  treesHarvestedToLog: number[];
+  placedLogs: PlacedLogPayload[];
+  stonePickups: StonePickupPayload[];
+  arrowPickups: ArrowPickupPayload[];
+  nextLogId: number;
+  nextPickupId: number;
+  nextArrowPickupId: number;
+}
+
 export interface FallenTreePayload {
   id: number;
   kind: TreeKind;
@@ -188,6 +200,37 @@ export const worldState = {
     nextLogId = 1;
     nextPickupId = 1;
     nextArrowPickupId = 1;
+    emit();
+  },
+  getSaveData(): WorldStateSaveData {
+    return {
+      fallenTrees: Array.from(fallenTrees.values()),
+      displacedRocks: Array.from(displacedRocks.values()),
+      treesHarvestedToLog: Array.from(treesHarvestedToLog),
+      placedLogs: Array.from(placedLogs.values()),
+      stonePickups: Array.from(stonePickups.values()),
+      arrowPickups: Array.from(arrowPickups.values()),
+      nextLogId,
+      nextPickupId,
+      nextArrowPickupId,
+    };
+  },
+  restoreSaveData(data: WorldStateSaveData): void {
+    fallenTrees.clear();
+    displacedRocks.clear();
+    treesHarvestedToLog.clear();
+    placedLogs.clear();
+    stonePickups.clear();
+    arrowPickups.clear();
+    for (const p of data.fallenTrees) fallenTrees.set(p.id, p);
+    for (const p of data.displacedRocks) displacedRocks.set(p.id, p);
+    for (const id of data.treesHarvestedToLog) treesHarvestedToLog.add(id);
+    for (const p of data.placedLogs) placedLogs.set(p.id, p);
+    for (const p of data.stonePickups) stonePickups.set(p.id, p);
+    for (const p of data.arrowPickups) arrowPickups.set(p.id, p);
+    nextLogId = data.nextLogId;
+    nextPickupId = data.nextPickupId;
+    nextArrowPickupId = data.nextArrowPickupId;
     emit();
   },
   subscribe(cb: () => void): () => void {

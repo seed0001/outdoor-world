@@ -48,6 +48,7 @@ import {
   subscribeSturdyPlacement,
 } from "../systems/ui/sturdyPlacementState";
 import WeatherIcon from "./WeatherIcon";
+import { useRunGoal } from "../systems/world/runGoal";
 
 function useSturdyPlacementMode(): boolean {
   const [on, setOn] = useState(isSturdyPlacementMode);
@@ -242,11 +243,16 @@ function formatClock(dayFrac: number): string {
   return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
 }
 
+const SEASON_ICONS_HUD = ["🌱", "☀", "🍂", "❄"] as const;
+
 export default function HUD({
   showSurvivalVitals = true,
+  suppressDeathScreen = false,
 }: {
   showSurvivalVitals?: boolean;
+  suppressDeathScreen?: boolean;
 }) {
+  const runGoalState = useRunGoal();
   const [locked, setLocked] = useState(false);
   const world = useWorldTime(4);
   const hp = useHealth();
@@ -408,6 +414,19 @@ export default function HUD({
             <span>{WEATHER_LABELS[weather.type]}</span>
             {weather.windStrength > 0.8 && <span className="wind">wind</span>}
           </div>
+          {showSurvivalVitals && runGoalState.active && (
+            <div className="season-tracker" title="Seasons survived (goal: all 4)">
+              {SEASON_ICONS_HUD.map((icon, i) => (
+                <span
+                  key={i}
+                  className={`season-tracker__dot${i < runGoalState.seasonsCompleted ? " season-tracker__dot--done" : ""}`}
+                  aria-label={i < runGoalState.seasonsCompleted ? "completed" : "pending"}
+                >
+                  {icon}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -673,7 +692,7 @@ export default function HUD({
         </div>
       )}
 
-      {hp.dead && (
+      {hp.dead && !suppressDeathScreen && (
         <div className="death-screen">
           <h1>You were killed</h1>
           <p>
