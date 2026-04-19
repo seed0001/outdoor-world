@@ -20,6 +20,7 @@ import Snakes from "./world/Snakes";
 import Rats from "./world/Rats";
 import Fish from "./world/Fish";
 import Butterfly from "./world/Butterfly";
+import Birds from "./world/Birds";
 import Bees from "./world/Bees";
 import Flowers from "./world/Flowers";
 import ColoredFlowerPatches from "./world/ColoredFlowerPatches";
@@ -62,6 +63,7 @@ import {
 } from "./systems/settings/playMode";
 
 import "./systems/world/groundState";
+import "./systems/world/birdState";
 import "./systems/player/survival";
 import { unlockGameAudio } from "./systems/audio/gameAudio";
 
@@ -147,6 +149,7 @@ export default function GameRoot({
               <Suspense fallback={null}>
                 <Butterfly />
               </Suspense>
+              <Birds />
               <Suspense fallback={null}>
                 <Bees />
               </Suspense>

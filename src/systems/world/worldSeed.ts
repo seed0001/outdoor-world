@@ -10,6 +10,10 @@ export const BUTTERFLY_PLACEMENT_SEED = 88441;
 export const BEE_PLACEMENT_SEED = 77331;
 export const COLORED_FLOWER_PATCH_SEED = 55881;
 export const ROSE_FLOWER_PLACEMENT_SEED = 66121;
+/** Ecological zones + flock definitions for migratory / flocking birds. */
+export const BIRD_ZONE_SEED = 88220;
+export const BIRD_FLOCK_DEF_SEED = 99221;
+
 /** Seeded mesh instances for `public/models/desert-trees` (south desert band). */
 export const DESERT_TREE_PLACEMENT_SEED = 44219;
 /** Seeded placements for `tree.glb` in the same desert band (separate RNG stream). */

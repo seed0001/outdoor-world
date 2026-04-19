@@ -29,6 +29,7 @@ import { health, useHealth } from "../systems/player/health";
 import { inventory } from "../systems/player/inventory";
 import { playerRef } from "../systems/player/playerRef";
 import { releasePointerLockForUI } from "../systems/ui/pointerLock";
+import { getBirdDebugSnapshot } from "../systems/world/birdState";
 
 const SCALES: { label: string; value: number }[] = [
   { label: "Pause", value: 0 },
@@ -215,6 +216,46 @@ export default function DevPanel() {
             </button>
           ))}
         </div>
+      </section>
+
+      <section>
+        <h4>Bird flocks</h4>
+        {getBirdDebugSnapshot().flocks.map((bf) => (
+          <div key={bf.id} className="devpanel-bird">
+            <div className="row">
+              <span>Flock</span>
+              <span className="mono">{bf.id}</span>
+            </div>
+            <div className="row">
+              <span>State</span>
+              <span className="mono">{bf.state}</span>
+            </div>
+            <div className="row">
+              <span>Birds</span>
+              <span className="mono">{bf.birdCount}</span>
+            </div>
+            <div className="row">
+              <span>On map</span>
+              <span className="mono">{bf.onMap ? "yes" : "no"}</span>
+            </div>
+            <div className="row">
+              <span>Zone</span>
+              <span className="mono">{bf.currentZoneId ?? "—"}</span>
+            </div>
+            <div className="row">
+              <span>Thirst / fear</span>
+              <span className="mono">
+                {bf.thirst.toFixed(2)} / {bf.fear.toFixed(2)}
+              </span>
+            </div>
+            {bf.shelterReason && (
+              <div className="row">
+                <span>Shelter</span>
+                <span className="mono">{bf.shelterReason}</span>
+              </div>
+            )}
+          </div>
+        ))}
       </section>
 
       <section>
