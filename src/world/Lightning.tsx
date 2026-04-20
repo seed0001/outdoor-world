@@ -185,7 +185,10 @@ export default function Lightning() {
         const t = (s.flashEndAt - now) / FLASH_LIFETIME_MS;
         if (t > 0) {
           const proximity = Math.max(0.2, 1 - s.distanceToPlayer / 80);
-          maxFlash = Math.max(maxFlash, t * 25 * proximity);
+          // Further reduced: even at 9× the point light blew the whole scene
+          // white in the middle of a thunderstorm night. 3.5× reads as a
+          // flash without wiping out the world around it.
+          maxFlash = Math.max(maxFlash, t * 3.5 * proximity);
           flash.position.set(s.origin.x, s.origin.y + 25, s.origin.z);
         }
       }
@@ -203,9 +206,9 @@ export default function Lightning() {
       <pointLight
         ref={flashLightRef}
         intensity={0}
-        color={"#e8f1ff"}
-        distance={200}
-        decay={1}
+        color={"#b6cff5"}
+        distance={140}
+        decay={2}
       />
       {strikes.map((s) => (
         <BoltMesh key={s.id} strike={s} />

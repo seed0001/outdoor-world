@@ -105,7 +105,10 @@ export default function Lake() {
         uniforms={uniforms}
         transparent
         depthWrite={false}
-        side={THREE.FrontSide}
+        // DoubleSide so the surface still renders when the player swims
+        // beneath it and looks up. The shader is orientation-agnostic (its
+        // "normal" is always computed as up-facing).
+        side={THREE.DoubleSide}
         vertexShader={VERTEX}
         fragmentShader={FRAGMENT}
       />
@@ -246,9 +249,11 @@ const FRAGMENT = /* glsl */ `
       col = mix(col, iceCol, uFreeze);
     }
 
-    // Alpha feathers at the very rim so the shoreline reads soft
-    float alpha = mix(0.92, 0.65, edgeT);
-    alpha = mix(alpha, 0.98, uFreeze);
+    // Opaque body of water — only the very last metre of shoreline softens so
+    // it blends into the beach. Anything deeper reads as a solid body of
+    // water you can't see straight through to the floor through.
+    float alpha = mix(0.985, 0.88, edgeT);
+    alpha = mix(alpha, 0.99, uFreeze);
 
     gl_FragColor = vec4(col, alpha);
   }

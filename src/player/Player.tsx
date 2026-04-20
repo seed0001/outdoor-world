@@ -7,7 +7,7 @@ import {
   useRapier,
   type RapierRigidBody,
 } from "@react-three/rapier";
-import { heightAt } from "../world/terrain";
+import { heightAt, LAKE_WATER_Y, submergedInLake } from "../world/terrain";
 import { useXR } from "@react-three/xr";
 import { usePlayerControlsGetter } from "./usePlayerControls";
 import { playerRef } from "../systems/player/playerRef";
@@ -21,7 +21,16 @@ const JUMP_VELOCITY = 7.5;
 
 const CAPSULE_HALF_HEIGHT = 0.55;
 const CAPSULE_RADIUS = 0.35;
-const EYE_OFFSET = CAPSULE_HALF_HEIGHT + CAPSULE_RADIUS * 0.5;
+export const EYE_OFFSET = CAPSULE_HALF_HEIGHT + CAPSULE_RADIUS * 0.5;
+
+/** Horizontal drag multiplier while in water. */
+const SWIM_SPEED_MULT = 0.55;
+/** Constant downward drift (slow sink) when idle underwater. */
+const SWIM_IDLE_SINK = -0.7;
+/** Upward velocity when pressing Jump/swim while submerged. */
+const SWIM_UP_VELOCITY = 3.8;
+/** How fast vertical velocity converges toward the swim target. */
+const SWIM_DRAG = 3.2;
 
 const GROUND_RAY_LEN = CAPSULE_HALF_HEIGHT + CAPSULE_RADIUS + 0.05;
 const RESPAWN_Y = -20;
@@ -121,8 +130,10 @@ export default function Player() {
       return;
     }
 
-    // Fall damage on landing
-    if (grounded && lastYVel.current < -16) {
+    const inWater = submergedInLake(pos.x, pos.y, pos.z);
+
+    // Fall damage on landing — skip if we splashed down into the lake.
+    if (grounded && lastYVel.current < -16 && !inWater) {
       const impact = -lastYVel.current - 16;
       health.damage(Math.min(100, Math.round(impact * 4)), "the ground");
     }
@@ -142,18 +153,21 @@ export default function Player() {
     dir.set(0, 0, 0).addScaledVector(forward, fwd).addScaledVector(right, rgt);
     if (dir.lengthSq() > 0) dir.normalize();
 
-    const speed = s.run ? RUN_SPEED : WALK_SPEED;
-    rb.setLinvel(
-      { x: dir.x * speed, y: v.y, z: dir.z * speed },
-      true,
-    );
+    const baseSpeed = s.run ? RUN_SPEED : WALK_SPEED;
+    const speed = inWater ? baseSpeed * SWIM_SPEED_MULT : baseSpeed;
 
-    if (s.jump && grounded) {
-      rb.setLinvel(
-        { x: dir.x * speed, y: JUMP_VELOCITY, z: dir.z * speed },
-        true,
-      );
+    let vy = v.y;
+    if (inWater) {
+      // Buoyant drag. Holding jump = swim up; otherwise sink slowly. The eye
+      // can still duck under when you stop swimming, so you actually feel
+      // “in” the water and not stuck at the surface.
+      const targetY = s.jump ? SWIM_UP_VELOCITY : SWIM_IDLE_SINK;
+      vy = THREE.MathUtils.lerp(v.y, targetY, Math.min(1, dt * SWIM_DRAG));
+    } else if (s.jump && grounded) {
+      vy = JUMP_VELOCITY;
     }
+
+    rb.setLinvel({ x: dir.x * speed, y: vy, z: dir.z * speed }, true);
 
     if (xrSession == null) {
       applyCamera(camera, pos, shakeOffset, state.clock.elapsedTime);

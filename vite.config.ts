@@ -3,6 +3,14 @@ import react from "@vitejs/plugin-react";
 
 export default defineConfig({
   plugins: [react()],
+  resolve: {
+    // Prevent "Multiple instances of Three.js" warnings when transitive deps
+    // (e.g. @dgreenheck/ez-tree) pull in their own copy of three.
+    dedupe: ["three"],
+  },
+  optimizeDeps: {
+    include: ["three"],
+  },
   server: {
     host: true,
     // Cloudflare quick tunnels send a changing `*.trycloudflare.com` Host header. Only

@@ -19,8 +19,15 @@ export const LAKE_CENTER_X = -28;
 export const LAKE_CENTER_Z = 22;
 export const LAKE_OUTER_R = 22;
 export const LAKE_INNER_R = 10;
-export const LAKE_WATER_Y = -0.3;
-export const LAKE_FLOOR_Y = -2.8;
+/** Water surface sits well below average terrain so the lake reads as a lake,
+ *  not a disk hovering on a hillside. */
+export const LAKE_WATER_Y = -1.6;
+/** Floor of the bowl. Deep enough to fully submerge the player (capsule + head). */
+export const LAKE_FLOOR_Y = -7.0;
+/** Width of the beach/shelf band outside LAKE_OUTER_R where we smoothly pull
+ *  the natural terrain down to just under the water line, so there is never a
+ *  visible gap between the ground mesh and the water disk. */
+export const LAKE_SHORE_BAND = 4.5;
 
 /** North of this Z: trees, lake ecology, flowers (roughly above desert transition). */
 export const GRASS_BIOME_Z_MIN = -88;
@@ -43,9 +50,23 @@ function heightGrassland(x: number, z: number): number {
   const lakeDx = x - LAKE_CENTER_X;
   const lakeDz = z - LAKE_CENTER_Z;
   const lakeDist = Math.hypot(lakeDx, lakeDz);
-  if (lakeDist < LAKE_OUTER_R) {
-    const t = smoothstep(LAKE_OUTER_R, LAKE_INNER_R, lakeDist);
-    h = lerp(h, LAKE_FLOOR_Y, t);
+  // Shore + basin. The shore band pulls surrounding terrain down to just under
+  // the water line so the disk never hovers above the surrounding hillside.
+  // Inside the water disk we blend from that shore shelf down to the floor.
+  const SHORE_Y = LAKE_WATER_Y - 0.35;
+  if (lakeDist < LAKE_OUTER_R + LAKE_SHORE_BAND) {
+    const beachT = smoothstep(
+      LAKE_OUTER_R + LAKE_SHORE_BAND,
+      LAKE_OUTER_R,
+      lakeDist,
+    );
+    // Force terrain below water line at the rim even when the natural
+    // heightfield would otherwise peak above it.
+    h = Math.min(lerp(h, SHORE_Y, beachT), SHORE_Y + (1 - beachT) * 3);
+    if (lakeDist < LAKE_OUTER_R) {
+      const floorT = smoothstep(LAKE_OUTER_R, LAKE_INNER_R, lakeDist);
+      h = lerp(SHORE_Y, LAKE_FLOOR_Y, floorT);
+    }
   }
   return h;
 }
@@ -106,6 +127,14 @@ export function insideLake(x: number, z: number, buffer = 0): boolean {
   const dx = x - LAKE_CENTER_X;
   const dz = z - LAKE_CENTER_Z;
   return Math.hypot(dx, dz) < LAKE_OUTER_R + buffer;
+}
+
+/**
+ * True when a point is submerged — inside the lake disk AND below the water
+ * surface. Used by swim physics and the underwater visual overlay.
+ */
+export function submergedInLake(x: number, y: number, z: number): boolean {
+  return y < LAKE_WATER_Y && insideLake(x, z);
 }
 
 /** True when terrain height is below the water surface (flower/tree placement). */

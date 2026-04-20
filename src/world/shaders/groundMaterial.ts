@@ -4,6 +4,9 @@ export interface GroundUniforms {
   uSnowLevel: { value: number };
   uWetness: { value: number };
   uTime: { value: number };
+  /** 0 = normal; 1 = fully underwater murk applied on top of ground. */
+  uUnderwater: { value: number };
+  uUnderwaterColor: { value: THREE.Color };
 }
 
 /**
@@ -27,12 +30,16 @@ export function createGroundMaterial(): {
     uSnowLevel: { value: 0 },
     uWetness: { value: 0 },
     uTime: { value: 0 },
+    uUnderwater: { value: 0 },
+    uUnderwaterColor: { value: new THREE.Color(0x063044) },
   };
 
   mat.onBeforeCompile = (shader) => {
     shader.uniforms.uSnowLevel = uniforms.uSnowLevel;
     shader.uniforms.uWetness = uniforms.uWetness;
     shader.uniforms.uTime = uniforms.uTime;
+    shader.uniforms.uUnderwater = uniforms.uUnderwater;
+    shader.uniforms.uUnderwaterColor = uniforms.uUnderwaterColor;
 
     // Inject world-space varyings.
     shader.vertexShader = `
@@ -53,6 +60,8 @@ export function createGroundMaterial(): {
       uniform float uSnowLevel;
       uniform float uWetness;
       uniform float uTime;
+      uniform float uUnderwater;
+      uniform vec3 uUnderwaterColor;
       varying vec3 vWorldPosition;
       varying vec3 vWorldNormal;
 
@@ -116,8 +125,12 @@ export function createGroundMaterial(): {
 
         float elevBoost = smoothstep(3.0, 7.5, vWorldPosition.y);
 
+        // Gate snow on real accumulation. Seasonal drift + transitioning
+        // weather can otherwise leave uSnowLevel barely above zero year-round
+        // and wash the ground pale under heavy storm lighting.
+        float snowGate = smoothstep(0.06, 0.18, uSnowLevel);
         float snow = clamp(
-          (slopeMask * patchy + elevBoost * 0.6) * uSnowLevel * 1.2 * (1.0 - desertBio * 0.95),
+          (slopeMask * patchy + elevBoost * 0.6) * uSnowLevel * 1.2 * snowGate * (1.0 - desertBio * 0.95),
           0.0,
           1.0
         );
@@ -137,9 +150,29 @@ export function createGroundMaterial(): {
       `
         #include <roughnessmap_fragment>
         float slopeF = clamp(vWorldNormal.y, 0.0, 1.0);
-        float snowMask = smoothstep(0.55, 0.9, slopeF) * uSnowLevel;
+        float snowMaskGate = smoothstep(0.06, 0.18, uSnowLevel);
+        float snowMask = smoothstep(0.55, 0.9, slopeF) * uSnowLevel * snowMaskGate;
         roughnessFactor = mix(roughnessFactor, 0.55, snowMask * 0.6);
         roughnessFactor = mix(roughnessFactor, 0.4, uWetness * 0.5);
+      `,
+    );
+
+    // Underwater murk. The ground material has scene fog disabled to avoid
+    // distant-hills-going-grey during storms; this is a dedicated, distance-
+    // based tint that only kicks in when the player is submerged.
+    shader.fragmentShader = shader.fragmentShader.replace(
+      "#include <dithering_fragment>",
+      `
+        #include <dithering_fragment>
+        if (uUnderwater > 0.001) {
+          float viewDist = length(vViewPosition);
+          float waterFog = 1.0 - exp(-viewDist * 0.22);
+          gl_FragColor.rgb = mix(
+            gl_FragColor.rgb,
+            uUnderwaterColor,
+            clamp(waterFog * uUnderwater, 0.0, 0.95)
+          );
+        }
       `,
     );
   };

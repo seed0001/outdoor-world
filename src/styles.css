@@ -1565,3 +1565,92 @@ canvas {
   background: linear-gradient(135deg, #3470c0, #2558a8);
   border-color: rgba(130, 180, 255, 0.6);
 }
+
+
+/* ----------------------------- Underwater ----------------------------- */
+
+.underwater-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9;
+  overflow: hidden;
+}
+
+.underwater-overlay__tint {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(20, 110, 160, calc(var(--underwater-tint-alpha) * 0.72)) 0%,
+    rgba(8, 50, 92, calc(var(--underwater-tint-alpha) * 1.0)) 55%,
+    rgba(2, 18, 42, calc(var(--underwater-tint-alpha) * 1.15)) 100%
+  );
+  mix-blend-mode: multiply;
+}
+
+.underwater-overlay__vignette {
+  position: absolute;
+  inset: -2%;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(0, 0, 0, 0) 45%,
+    rgba(0, 20, 35, calc(var(--underwater-vignette-alpha) * 0.55)) 72%,
+    rgba(0, 8, 18, var(--underwater-vignette-alpha)) 100%
+  );
+}
+
+/* Slow bluish caustic shimmer overlay. Uses animated linear gradients that
+   crisscross the screen to suggest rippling light. */
+.underwater-overlay__caustics {
+  position: absolute;
+  inset: -10%;
+  background:
+    repeating-linear-gradient(
+      115deg,
+      rgba(180, 225, 255, 0.00) 0px,
+      rgba(180, 225, 255, 0.05) 40px,
+      rgba(180, 225, 255, 0.00) 110px
+    ),
+    repeating-linear-gradient(
+      65deg,
+      rgba(180, 225, 255, 0.00) 0px,
+      rgba(180, 225, 255, 0.035) 55px,
+      rgba(180, 225, 255, 0.00) 150px
+    );
+  mix-blend-mode: screen;
+  opacity: 0.75;
+  animation: underwater-caustics 9s linear infinite;
+}
+
+@keyframes underwater-caustics {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-80px, 60px, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .underwater-overlay__caustics {
+    animation: none;
+  }
+}
+
+
+/* Underwater lens: blurs + desaturates + dims everything under the overlay. */
+.underwater-overlay__lens {
+  position: absolute;
+  inset: 0;
+  backdrop-filter:
+    blur(var(--underwater-blur))
+    saturate(var(--underwater-saturate))
+    brightness(var(--underwater-brightness))
+    hue-rotate(-8deg);
+  -webkit-backdrop-filter:
+    blur(var(--underwater-blur))
+    saturate(var(--underwater-saturate))
+    brightness(var(--underwater-brightness))
+    hue-rotate(-8deg);
+}

@@ -28,6 +28,8 @@ import Flowers from "./world/Flowers";
 import ColoredFlowerPatches from "./world/ColoredFlowerPatches";
 import RoseFlowers from "./world/RoseFlowers";
 import Lake from "./world/Lake";
+import WaterImmersionController from "./world/WaterImmersionController";
+import UnderwaterOverlay from "./ui/UnderwaterOverlay";
 import Clouds from "./world/Clouds";
 import Precipitation from "./world/Precipitation";
 import Lightning from "./world/Lightning";
@@ -251,6 +253,7 @@ export default function GameRoot({
                 <TreeInspectRay />
                 <HeadingSync />
                 <VitalsSystem />
+                <WaterImmersionController />
                 <Tornado />
               </Physics>
               <Campfires />
@@ -287,6 +290,7 @@ export default function GameRoot({
         />
       )}
       <ViewRecorder canvasWrapRef={canvasWrapRef} />
+      <UnderwaterOverlay />
       <TreeInspectPopup />
       <DevPanel />
       <EcosystemPanel />

@@ -92,13 +92,19 @@ export default function Sky() {
       sun.position.copy(sunDir).multiplyScalar(80);
       sun.target.position.set(0, 0, 0);
       sun.target.updateMatrixWorld();
-      const baseIntensity = dayFactor * 2.6;
-      // Slightly softer than 0.92× so thunderstorm keeps a sliver of directional light.
-      const sunAtten = 1 - THREE.MathUtils.clamp(cloudDarkness * 0.82, 0, 0.94);
-      let sunInt = baseIntensity * sunAtten;
-      // Floor: fully dark albedo + no env map = “missing” ground under heavy clouds.
-      if (cloudDarkness > 0.55) {
-        sunInt = Math.max(sunInt, 0.38 * dayFactor + 0.06 * nightFactor);
+      // Hard cut at the horizon: once the sun is below, no directional light
+      // at all. The old floor kept a warm orange light on during nights which
+      // tinted the ground pale pink under thunderstorm lighting.
+      let sunInt = 0;
+      if (elev > 0) {
+        const baseIntensity = dayFactor * 2.6;
+        const sunAtten = 1 - THREE.MathUtils.clamp(cloudDarkness * 0.82, 0, 0.94);
+        sunInt = baseIntensity * sunAtten;
+        // Daytime-only floor so storms in the middle of the day don't wipe
+        // the ground to black. At night we want properly dark.
+        if (cloudDarkness > 0.55) {
+          sunInt = Math.max(sunInt, 0.38 * dayFactor);
+        }
       }
       sun.intensity = sunInt;
       const warmth = 1 - THREE.MathUtils.clamp(elev * 3, 0, 1);
@@ -114,7 +120,9 @@ export default function Sky() {
       moon.target.position.set(0, 0, 0);
       moon.target.updateMatrixWorld();
       moon.intensity =
-        nightFactor * 0.55 * (1 - THREE.MathUtils.clamp(cloudDarkness * 0.65, 0, 0.95));
+        nightFactor *
+        0.28 *
+        (1 - THREE.MathUtils.clamp(cloudDarkness * 0.85, 0, 0.98));
       moon.visible = moon.intensity > 0.001;
     }
     const moonMesh = moonMeshRef.current;
@@ -151,11 +159,16 @@ export default function Sky() {
     }
 
     // --- Ambient + hemisphere ---
+    // Night falls off completely. The old anti-blackness floors were tied to
+    // cloudDarkness regardless of day/night, which kept a pale-pink wash on
+    // the ground during thunderstorm nights.
     if (ambientRef.current) {
       let amb =
-        (0.08 + dayFactor * 0.32) *
+        (0.025 + dayFactor * 0.36) *
         (1 - THREE.MathUtils.clamp(cloudDarkness * 0.58, 0, 0.95));
-      if (cloudDarkness > 0.5) amb = Math.max(amb, 0.14 + dayFactor * 0.12);
+      if (cloudDarkness > 0.5 && dayFactor > 0.08) {
+        amb = Math.max(amb, 0.14 * dayFactor + 0.08);
+      }
       ambientRef.current.intensity = amb;
       ambientRef.current.color
         .copy(AMBIENT_NIGHT)
@@ -163,9 +176,11 @@ export default function Sky() {
     }
     if (hemiRef.current) {
       let hemi =
-        (0.1 + dayFactor * 0.45) *
+        (0.04 + dayFactor * 0.5) *
         (1 - THREE.MathUtils.clamp(cloudDarkness * 0.68, 0, 0.95));
-      if (cloudDarkness > 0.5) hemi = Math.max(hemi, 0.18 + dayFactor * 0.16);
+      if (cloudDarkness > 0.5 && dayFactor > 0.08) {
+        hemi = Math.max(hemi, 0.18 * dayFactor + 0.06);
+      }
       hemiRef.current.intensity = hemi;
     }
     if (stormFillRef.current) {
@@ -174,8 +189,10 @@ export default function Sky() {
         0,
         1,
       );
+      // Storm fill only kicks in during the day. At night we want the storm
+      // to read as pitch-dark apart from lightning flashes.
       stormFillRef.current.intensity =
-        k * k * (0.12 + dayFactor * 0.14 + nightFactor * 0.05);
+        k * k * (0.1 + dayFactor * 0.18) * dayFactor;
       stormFillRef.current.color.copy(STORM_FOG).lerp(AMBIENT_DAY, dayFactor * 0.35);
     }
 

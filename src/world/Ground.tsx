@@ -13,6 +13,7 @@ import {
 } from "./terrain";
 import { createGroundMaterial } from "./shaders/groundMaterial";
 import { getGroundState } from "../systems/world/groundState";
+import { getWaterImmersion } from "../systems/player/waterImmersion";
 
 export default function Ground() {
   const geometry = useMemo(() => {
@@ -76,6 +77,15 @@ export default function Ground() {
     uniforms.uWetness.value +=
       (ground.wetness - uniforms.uWetness.value) * Math.min(1, dt * 2);
     uniforms.uTime.value += dt;
+
+    // Gentle ease in/out of the underwater tint so entering/exiting the lake
+    // doesn't pop. Target strength scales with submersion depth.
+    const immersion = getWaterImmersion();
+    const targetUW = immersion.submerged
+      ? Math.min(1, 0.55 + immersion.depth * 0.2)
+      : 0;
+    uniforms.uUnderwater.value +=
+      (targetUW - uniforms.uUnderwater.value) * Math.min(1, dt * 4);
   });
 
   return (
