@@ -66,6 +66,7 @@ export function getEcosystemSnapshot(): EcosystemSnapshot {
   const weather = getWeather();
   const fallen = worldState.listFallenTrees().length;
   const displaced = worldState.listDisplacedRocks().length;
+  const mined = worldState.listMinedRocks().length;
 
   return {
     time: {
@@ -91,7 +92,7 @@ export function getEcosystemSnapshot(): EcosystemSnapshot {
     },
     geology: {
       rocksSpawned: rocks.length,
-      rocksStatic: rocks.length - displaced,
+      rocksStatic: rocks.length - displaced - mined,
       rocksDisplaced: displaced,
     },
     atmosphere: {

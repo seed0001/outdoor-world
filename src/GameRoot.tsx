@@ -37,6 +37,7 @@ import Tornado from "./world/Tornado";
 import Player from "./player/Player";
 import HeldAxe from "./player/HeldAxe";
 import ChopSystem from "./player/ChopSystem";
+import ChopVfx from "./world/ChopVfx";
 import ActionFSystem from "./player/ActionFSystem";
 import TreeInspectRay from "./player/TreeInspectRay";
 import HeadingSync from "./player/HeadingSync";
@@ -250,6 +251,7 @@ export default function GameRoot({
                 <Player />
                 <HeldAxe />
                 <ChopSystem />
+                <ChopVfx />
                 <TreeInspectRay />
                 <HeadingSync />
                 <VitalsSystem />

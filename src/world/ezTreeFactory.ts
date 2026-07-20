@@ -54,6 +54,8 @@ export function buildEzTree(spec: TreeSpec): Tree {
   tree.position.set(spec.x, spec.y - box2.min.y, spec.z);
   tree.rotation.y = spec.rot;
   tree.userData.treeId = spec.id;
+  tree.userData.baseX = spec.x;
+  tree.userData.baseZ = spec.z;
   tree.frustumCulled = false;
   return tree;
 }

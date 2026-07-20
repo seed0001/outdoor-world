@@ -15,11 +15,6 @@ import { useSurvival } from "../systems/player/survival";
 import { useVitals, vitals } from "../systems/player/vitals";
 import { playerRef } from "../systems/player/playerRef";
 import { inventory, useInventory } from "../systems/player/inventory";
-import {
-  MINERAL_INVENTORY_KEYS,
-  MINERAL_NAMES,
-  type MineralInventoryKey,
-} from "../systems/world/mineralRegistry";
 import type { InventoryItem } from "../systems/player/inventory";
 import {
   isBackpackOpen,
@@ -48,6 +43,9 @@ import {
   subscribeSturdyPlacement,
 } from "../systems/ui/sturdyPlacementState";
 import WeatherIcon from "./WeatherIcon";
+import InventoryItemIcon from "./InventoryItemIcon";
+import { BACKPACK_ITEMS } from "./inventoryLayout";
+import Compass from "./Compass";
 import { useRunGoal } from "../systems/world/runGoal";
 
 function useSturdyPlacementMode(): boolean {
@@ -61,37 +59,17 @@ function useSturdyPlacementMode(): boolean {
   );
   return on;
 }
-import Compass from "./Compass";
 
-/** Put your sticks artwork at `public/images/inventory/sticks-bundle.png`. */
-const STICKS_ICON_URL = "/images/inventory/sticks-bundle.png";
-
-const MINERAL_ABBREV = ["Fe", "Cu", "Qz", "S", "Na"] as const;
-
-const MEAT_ROW: { key: InventoryItem; title: string; abbr: string }[] = [
-  { key: "raw_rat", title: "Raw rat", abbr: "rRt" },
-  { key: "raw_snake", title: "Raw snake", abbr: "rSn" },
-  { key: "raw_fish", title: "Raw fish", abbr: "rFi" },
-  { key: "cooked_rat", title: "Cooked rat", abbr: "Rt" },
-  { key: "cooked_snake", title: "Cooked snake", abbr: "Sn" },
-  { key: "cooked_fish", title: "Cooked fish", abbr: "Fi" },
-];
-
-function BackpackStickCell({ qty }: { qty: number }) {
-  const [imgOk, setImgOk] = useState(true);
+function BackpackItemCell({
+  item,
+  qty,
+}: {
+  item: InventoryItem;
+  qty: number;
+}) {
   return (
     <>
-      {imgOk ? (
-        <img
-          className="backpack-cell__icon"
-          src={STICKS_ICON_URL}
-          alt=""
-          draggable={false}
-          onError={() => setImgOk(false)}
-        />
-      ) : (
-        <span className="backpack-cell__name">Stk</span>
-      )}
+      <InventoryItemIcon item={item} className="backpack-cell__icon" />
       <span className="backpack-cell__qty mono">{qty}</span>
     </>
   );
@@ -487,109 +465,23 @@ export default function HUD({
             </button>
           </header>
           <section className="backpack-section">
-            <div className="backpack-grid" aria-label="Inventory grid">
-              {Array.from({ length: 144 }, (_, i) => {
-                const col = i % 12;
-                const row = Math.floor(i / 12);
-                const isStick = row === 0 && col === 0;
-                const isStone = row === 0 && col === 1;
-                const isArrow = row === 0 && col === 7;
-                const isSturdy = row === 0 && col === 8;
-                const isWood = row === 0 && col === 9;
-                const mineralIndex =
-                  row === 0 &&
-                  col >= 2 &&
-                  col < 2 + MINERAL_INVENTORY_KEYS.length
-                    ? col - 2
-                    : -1;
-                const mineralKey: MineralInventoryKey | null =
-                  mineralIndex >= 0
-                    ? MINERAL_INVENTORY_KEYS[mineralIndex]
-                    : null;
-                const meat =
-                  row === 1 && col >= 0 && col < MEAT_ROW.length
-                    ? MEAT_ROW[col]
-                    : null;
-                const reserved =
-                  isStick ||
-                  isStone ||
-                  isWood ||
-                  isArrow ||
-                  isSturdy ||
-                  mineralKey !== null ||
-                  meat !== null;
-                const qty = isStick
-                  ? inv.stick
-                  : isStone
-                    ? inv.stone
-                    : isWood
-                      ? inv.wood
-                      : isArrow
-                        ? inv.arrow
-                        : isSturdy
-                          ? inv.sturdy_frame
-                          : mineralKey
-                            ? inv[mineralKey]
-                            : meat
-                              ? inv[meat.key]
-                              : 0;
-                const filled = reserved && qty > 0;
-                const title = isStick
-                  ? "Sticks"
-                  : isStone
-                    ? "Stone"
-                    : isWood
-                      ? "Wood"
-                      : isArrow
-                        ? "Arrows"
-                        : isSturdy
-                          ? "Sturdy shelter kit (B to place)"
-                          : mineralKey
-                            ? MINERAL_NAMES[mineralIndex]
-                            : meat
-                              ? meat.title
-                              : `Slot ${row + 1},${col + 1}`;
+            <div
+              className="backpack-grid"
+              style={{
+                gridTemplateColumns: "repeat(4, var(--backpack-cell-size))",
+              }}
+              aria-label="Inventory grid"
+            >
+              {BACKPACK_ITEMS.map((slot) => {
+                const qty = inv[slot.item];
+                const filled = qty > 0;
                 return (
                   <div
-                    key={i}
-                    className={`backpack-cell${reserved ? " backpack-cell--reserved" : ""}${filled ? " backpack-cell--filled" : ""}`}
-                    title={title}
+                    key={slot.item}
+                    className={`backpack-cell backpack-cell--reserved${filled ? " backpack-cell--filled" : ""}`}
+                    title={slot.title}
                   >
-                    {isStick ? (
-                      <BackpackStickCell qty={qty} />
-                    ) : isStone ? (
-                      <>
-                        <span className="backpack-cell__name">Stn</span>
-                        <span className="backpack-cell__qty mono">{qty}</span>
-                      </>
-                    ) : isWood ? (
-                      <>
-                        <span className="backpack-cell__name">Wd</span>
-                        <span className="backpack-cell__qty mono">{qty}</span>
-                      </>
-                    ) : isArrow ? (
-                      <>
-                        <span className="backpack-cell__name">Arr</span>
-                        <span className="backpack-cell__qty mono">{qty}</span>
-                      </>
-                    ) : isSturdy ? (
-                      <>
-                        <span className="backpack-cell__name">Kit</span>
-                        <span className="backpack-cell__qty mono">{qty}</span>
-                      </>
-                    ) : mineralKey && mineralIndex >= 0 ? (
-                      <>
-                        <span className="backpack-cell__name">
-                          {MINERAL_ABBREV[mineralIndex]}
-                        </span>
-                        <span className="backpack-cell__qty mono">{qty}</span>
-                      </>
-                    ) : meat ? (
-                      <>
-                        <span className="backpack-cell__name">{meat.abbr}</span>
-                        <span className="backpack-cell__qty mono">{qty}</span>
-                      </>
-                    ) : null}
+                    <BackpackItemCell item={slot.item} qty={qty} />
                   </div>
                 );
               })}

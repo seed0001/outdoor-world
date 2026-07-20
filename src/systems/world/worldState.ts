@@ -5,6 +5,7 @@ import type { MineralKind } from "./mineralRegistry";
 export interface WorldStateSaveData {
   fallenTrees: FallenTreePayload[];
   displacedRocks: DisplacedRockPayload[];
+  minedRocks: number[];
   treesHarvestedToLog: number[];
   placedLogs: PlacedLogPayload[];
   stonePickups: StonePickupPayload[];
@@ -64,6 +65,7 @@ export interface ArrowPickupPayload {
 
 const fallenTrees = new Map<number, FallenTreePayload>();
 const displacedRocks = new Map<number, DisplacedRockPayload>();
+const minedRocks = new Set<number>();
 /** Standing trees removed for a placed log. */
 const treesHarvestedToLog = new Set<number>();
 const placedLogs = new Map<number, PlacedLogPayload>();
@@ -163,6 +165,13 @@ export const worldState = {
     if (!displacedRocks.delete(rockId)) return;
     emit();
   },
+  /** Player mined a static boulder in place — hide mesh and collider. */
+  destroyRock(rockId: number) {
+    if (minedRocks.has(rockId)) return;
+    minedRocks.add(rockId);
+    displacedRocks.delete(rockId);
+    emit();
+  },
   isTreeFallen(id: number) {
     return fallenTrees.has(id);
   },
@@ -172,11 +181,17 @@ export const worldState = {
   isRockDisplaced(id: number) {
     return displacedRocks.has(id);
   },
+  isRockMined(id: number) {
+    return minedRocks.has(id);
+  },
   listFallenTrees(): FallenTreePayload[] {
     return Array.from(fallenTrees.values());
   },
   listDisplacedRocks(): DisplacedRockPayload[] {
     return Array.from(displacedRocks.values());
+  },
+  listMinedRocks(): number[] {
+    return Array.from(minedRocks);
   },
   listPlacedLogs(): PlacedLogPayload[] {
     return Array.from(placedLogs.values());
@@ -193,6 +208,7 @@ export const worldState = {
   reset() {
     fallenTrees.clear();
     displacedRocks.clear();
+    minedRocks.clear();
     treesHarvestedToLog.clear();
     placedLogs.clear();
     stonePickups.clear();
@@ -206,6 +222,7 @@ export const worldState = {
     return {
       fallenTrees: Array.from(fallenTrees.values()),
       displacedRocks: Array.from(displacedRocks.values()),
+      minedRocks: Array.from(minedRocks),
       treesHarvestedToLog: Array.from(treesHarvestedToLog),
       placedLogs: Array.from(placedLogs.values()),
       stonePickups: Array.from(stonePickups.values()),
@@ -218,12 +235,14 @@ export const worldState = {
   restoreSaveData(data: WorldStateSaveData): void {
     fallenTrees.clear();
     displacedRocks.clear();
+    minedRocks.clear();
     treesHarvestedToLog.clear();
     placedLogs.clear();
     stonePickups.clear();
     arrowPickups.clear();
     for (const p of data.fallenTrees) fallenTrees.set(p.id, p);
     for (const p of data.displacedRocks) displacedRocks.set(p.id, p);
+    for (const id of data.minedRocks ?? []) minedRocks.add(id);
     for (const id of data.treesHarvestedToLog) treesHarvestedToLog.add(id);
     for (const p of data.placedLogs) placedLogs.set(p.id, p);
     for (const p of data.stonePickups) stonePickups.set(p.id, p);

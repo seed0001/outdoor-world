@@ -22,6 +22,7 @@ import {
 import { sturdyFrames } from "../systems/world/sturdyFrames";
 import { insideLake } from "../world/terrain";
 import { playMiningRockSfx, playWoodChopSfx } from "../systems/audio/gameAudio";
+import { reportChopHit } from "../systems/world/chopVfx";
 import { rayPickFauna } from "../systems/world/faunaPositions";
 import { killFauna } from "../systems/world/faunaLifecycle";
 const RAY_LEN = 4.2;
@@ -67,6 +68,7 @@ export default function ChopSystem() {
   const { rapier, world } = useRapier();
   const dir = useRef(new THREE.Vector3());
   const origin = useRef(new THREE.Vector3());
+  const hitPoint = useRef(new THREE.Vector3());
   const cooldown = useRef(0);
   const placeCooldown = useRef(0);
   const placeWasDown = useRef(false);
@@ -183,12 +185,27 @@ export default function ChopSystem() {
     const ud = raw as { kind?: HitKind; id?: number; logId?: number };
     const kind = ud.kind;
 
+    const hitT = hit.timeOfImpact;
+    hitPoint.current.set(
+      o.x + dir.current.x * hitT,
+      o.y + dir.current.y * hitT,
+      o.z + dir.current.z * hitT,
+    );
+
     if (kind === "tree" && typeof ud.id === "number") {
       const id = ud.id;
       if (worldState.isTreeFallen(id) || worldState.isTreeHarvestedToLog(id)) return;
       playWoodChopSfx();
       const n = (treeChops.current.get(id) ?? 0) + 1;
       treeChops.current.set(id, n);
+      reportChopHit({
+        kind: "tree",
+        targetId: id,
+        position: hitPoint.current,
+        direction: dir.current,
+        hitIndex: n,
+        maxHits: STANDING_TREE_HITS,
+      });
       addCameraShake(0.06);
       if (n >= STANDING_TREE_HITS) {
         treeChops.current.delete(id);
@@ -213,6 +230,14 @@ export default function ChopSystem() {
       playWoodChopSfx();
       const n = (fallenChops.current.get(id) ?? 0) + 1;
       fallenChops.current.set(id, n);
+      reportChopHit({
+        kind: "fallenTree",
+        targetId: id,
+        position: hitPoint.current,
+        direction: dir.current,
+        hitIndex: n,
+        maxHits: FALLEN_TREE_HITS,
+      });
       addCameraShake(0.07);
       if (n >= FALLEN_TREE_HITS) {
         fallenChops.current.delete(id);
@@ -234,6 +259,14 @@ export default function ChopSystem() {
       playWoodChopSfx();
       const n = (logChops.current.get(logId) ?? 0) + 1;
       logChops.current.set(logId, n);
+      reportChopHit({
+        kind: "worldLog",
+        targetId: logId,
+        position: hitPoint.current,
+        direction: dir.current,
+        hitIndex: n,
+        maxHits: LOG_HITS,
+      });
       addCameraShake(0.07);
       if (n >= LOG_HITS) {
         logChops.current.delete(logId);
@@ -257,6 +290,7 @@ export default function ChopSystem() {
 
     if (kind === "rock" && typeof ud.id === "number") {
       const rockId = ud.id;
+      if (worldState.isRockMined(rockId)) return;
       const spec = rockList.find((r) => r.id === rockId);
       const isDisplaced = worldState.isRockDisplaced(rockId);
 
@@ -264,28 +298,20 @@ export default function ChopSystem() {
         const n = (staticRockChops.current.get(rockId) ?? 0) + 1;
         staticRockChops.current.set(rockId, n);
         playMiningRockSfx();
+        reportChopHit({
+          kind: "rock",
+          targetId: rockId,
+          position: hitPoint.current,
+          direction: dir.current,
+          hitIndex: n,
+          maxHits: STATIC_ROCK_HITS,
+        });
         addCameraShake(0.09);
         if (n >= STATIC_ROCK_HITS) {
           staticRockChops.current.delete(rockId);
-          const dirX = dir.current.x;
-          const dirZ = dir.current.z;
-          const h = Math.hypot(dirX, dirZ) || 1;
-          const nx = dirX / h;
-          const nz = dirZ / h;
-          const now = performance.now();
-          worldState.displaceRock({
-            id: rockId,
-            position: [spec.x, spec.y + spec.scale * 0.45, spec.z],
-            scale: [spec.scale * 0.55, spec.scale * 0.55, spec.scale * 0.55],
-            initialImpulse: [nx * 8, 14, nz * 8],
-            angularImpulse: [
-              (Math.random() - 0.5) * 6,
-              (Math.random() - 0.5) * 4,
-              (Math.random() - 0.5) * 6,
-            ],
-            spawnSimMs: now,
-          });
+          worldState.destroyRock(rockId);
           grantRockBreakLoot(spec, "dislodge");
+          grantRockBreakLoot(spec, "smash");
         }
         return;
       }
@@ -300,6 +326,14 @@ export default function ChopSystem() {
         const n = (dynamicRockChops.current.get(rockId) ?? 0) + 1;
         dynamicRockChops.current.set(rockId, n);
         playMiningRockSfx();
+        reportChopHit({
+          kind: "rock",
+          targetId: rockId,
+          position: hitPoint.current,
+          direction: dir.current,
+          hitIndex: n,
+          maxHits: DYNAMIC_ROCK_HITS,
+        });
         addCameraShake(0.08);
         if (n >= DYNAMIC_ROCK_HITS) {
           dynamicRockChops.current.delete(rockId);

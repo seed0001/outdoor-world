@@ -408,13 +408,14 @@ canvas {
 }
 
 .backpack {
+  --backpack-cell-size: 112px;
   position: fixed;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
   z-index: 45;
-  width: min(520px, calc(100vw - 24px));
-  max-height: min(90vh, 640px);
+  width: min(calc(var(--backpack-cell-size) * 4 + 56px), calc(100vw - 20px));
+  max-height: min(92vh, 900px);
   display: flex;
   flex-direction: column;
   background: rgba(14, 18, 28, 0.94);
@@ -457,7 +458,7 @@ canvas {
 }
 
 .backpack-section {
-  padding: 10px 12px 8px;
+  padding: 14px 16px 12px;
   flex: 1;
   min-height: 0;
   overflow: auto;
@@ -465,40 +466,48 @@ canvas {
 
 .backpack-grid {
   display: grid;
-  grid-template-columns: repeat(12, 1fr);
-  grid-template-rows: repeat(12, 1fr);
-  gap: 3px;
-  width: 100%;
-  aspect-ratio: 1;
-  max-height: min(72vw, 72vh, 480px);
+  grid-template-columns: repeat(4, var(--backpack-cell-size));
+  gap: 10px;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 auto;
 }
 
 .backpack-cell {
   position: relative;
-  min-width: 0;
-  min-height: 0;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 4px;
+  width: var(--backpack-cell-size);
+  height: var(--backpack-cell-size);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
   background: rgba(0, 0, 0, 0.28);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 1px;
-  font-size: 8px;
+  padding: 10px 8px 8px;
+  font-size: 12px;
   line-height: 1.1;
   text-align: center;
   overflow: hidden;
+  box-sizing: border-box;
 }
 
 .backpack-cell--reserved {
   background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+.backpack-cell--reserved:not(.backpack-cell--filled) .backpack-cell__icon {
+  opacity: 0.38;
 }
 
 .backpack-cell--filled {
   background: rgba(70, 120, 200, 0.18);
   border-color: rgba(120, 170, 255, 0.35);
+}
+
+.backpack-cell--filled .backpack-cell__icon {
+  opacity: 1;
 }
 
 .backpack-cell__name {
@@ -509,19 +518,24 @@ canvas {
 }
 
 .backpack-cell__icon {
-  width: 100%;
-  height: 55%;
-  max-height: 42px;
+  width: 84%;
+  height: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: 80%;
   object-fit: contain;
   object-position: center;
+  display: block;
   user-select: none;
   pointer-events: none;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.45));
 }
 
 .backpack-cell__qty {
-  font-size: 11px;
+  font-size: 18px;
   font-weight: 700;
-  margin-top: 1px;
+  margin-top: 4px;
+  line-height: 1;
 }
 
 .backpack-footer {

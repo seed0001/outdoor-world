@@ -19,6 +19,7 @@ function rockMeshColor(spec: RockSpec): string {
 
 export default function Rocks() {
   const [displacedIds, setDisplacedIds] = useState<Set<number>>(new Set());
+  const [minedIds, setMinedIds] = useState<Set<number>>(new Set());
   const [displacedPayloads, setDisplacedPayloads] = useState<
     DisplacedRockPayload[]
   >([]);
@@ -28,6 +29,7 @@ export default function Rocks() {
       const list = worldState.listDisplacedRocks();
       setDisplacedPayloads(list);
       setDisplacedIds(new Set(list.map((r) => r.id)));
+      setMinedIds(new Set(worldState.listMinedRocks()));
     };
     sync();
     return worldState.subscribe(sync);
@@ -36,7 +38,7 @@ export default function Rocks() {
   return (
     <group>
       {rockList.map((r) => {
-        if (displacedIds.has(r.id)) return null;
+        if (displacedIds.has(r.id) || minedIds.has(r.id)) return null;
         return <StaticRock key={`static-${r.id}`} spec={r} />;
       })}
       {displacedPayloads.map((p) => (
