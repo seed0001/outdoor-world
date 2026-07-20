@@ -111,7 +111,7 @@ export function createGroundMaterial(): {
           mix(oliveTint, mossTint, gT3),
           gT2 * 0.72
         );
-        grassPatchTint = clamp(grassPatchTint, vec3(0.78), vec3(1.14));
+        grassPatchTint = clamp(grassPatchTint, vec3(0.78), vec3(1.0));
         float grassMix = 0.68 * (1.0 - desertBio * 0.92);
         diffuseColor.rgb *= mix(vec3(1.0), grassPatchTint, grassMix);
 
@@ -141,6 +141,14 @@ export function createGroundMaterial(): {
         // Wet darkening (muds the grass, less effect on snow)
         float wetMask = (1.0 - snow) * uWetness * (1.0 - desertBio * 0.85);
         diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * 0.55, wetMask);
+
+        // Never let storm-crushed lighting drive terrain to pure black.
+        vec3 terrainFloor = mix(
+          vec3(0.055, 0.06, 0.05),
+          vec3(0.07, 0.065, 0.05),
+          desertBio
+        );
+        diffuseColor.rgb = max(diffuseColor.rgb, terrainFloor * (0.35 + uWetness * 0.12));
       `,
     );
 
@@ -164,6 +172,7 @@ export function createGroundMaterial(): {
       "#include <dithering_fragment>",
       `
         #include <dithering_fragment>
+        gl_FragColor.rgb = min(gl_FragColor.rgb, vec3(0.9));
         if (uUnderwater > 0.001) {
           float viewDist = length(vViewPosition);
           float waterFog = 1.0 - exp(-viewDist * 0.22);
@@ -179,7 +188,7 @@ export function createGroundMaterial(): {
 
   // Ensure the material recompiles when uniforms change (three r3f handles
   // this automatically since it's the same material instance).
-  mat.customProgramCacheKey = () => "ground-seasonal-grass-desert-v1";
+  mat.customProgramCacheKey = () => "ground-seasonal-grass-desert-v3";
 
   return { material: mat, uniforms };
 }

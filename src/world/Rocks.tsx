@@ -10,6 +10,10 @@ import { mineralSampleColor } from "../systems/world/mineralRegistry";
 import { worldState, type DisplacedRockPayload } from "../systems/world/worldState";
 
 function rockMeshColor(spec: RockSpec): string {
+  if (spec.role === "formation" && spec.formationColor) {
+    const [r, g, b] = spec.formationColor;
+    return `#${new THREE.Color(r, g, b).getHexString()}`;
+  }
   const s = spec.shade;
   const base = new THREE.Color(
     (150 * s) / 255,
@@ -17,7 +21,7 @@ function rockMeshColor(spec: RockSpec): string {
     (135 * s) / 255,
   );
   const tint = new THREE.Color(mineralSampleColor(spec.mineralVein));
-  base.lerp(tint, spec.role === "formation" ? 0.1 : 0.2);
+  base.lerp(tint, 0.2);
   return `#${base.getHexString()}`;
 }
 

@@ -19,6 +19,9 @@ export type InventoryItem =
   | "cooked_rat"
   | "cooked_snake"
   | "cooked_fish"
+  | "wildflower"
+  | "petal_flower"
+  | "rose"
   | MineralInventoryKey;
 
 function emptyCounts(): Record<InventoryItem, number> {
@@ -34,6 +37,9 @@ function emptyCounts(): Record<InventoryItem, number> {
     cooked_rat: 0,
     cooked_snake: 0,
     cooked_fish: 0,
+    wildflower: 0,
+    petal_flower: 0,
+    rose: 0,
   } as Record<InventoryItem, number>;
   for (const k of MINERAL_INVENTORY_KEYS) {
     m[k] = 0;

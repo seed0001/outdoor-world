@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import {
@@ -76,7 +76,7 @@ function ChipBurst({
   geometry,
   color,
 }: {
-  material: StrikeMaterial;
+  material: "wood" | "stone";
   geometry: THREE.BufferGeometry;
   color: string;
 }) {
@@ -109,6 +109,59 @@ function ChipBurst({
   );
 }
 
+function FlowerChipBurst({ geometry }: { geometry: THREE.BufferGeometry }) {
+  const meshRef = useRef<THREE.InstancedMesh>(null);
+  const dummy = useMemo(() => new THREE.Object3D(), []);
+  const colorScratch = useMemo(() => new THREE.Color(), []);
+
+  useLayoutEffect(() => {
+    const mesh = meshRef.current;
+    if (!mesh) return;
+    mesh.instanceColor = new THREE.InstancedBufferAttribute(
+      new Float32Array(96 * 3),
+      3,
+    );
+  }, []);
+
+  useFrame(() => {
+    const mesh = meshRef.current;
+    if (!mesh) return;
+
+    let idx = 0;
+    for (const c of listChips()) {
+      if (!c.active || c.material !== "flower") continue;
+      dummy.position.copy(c.position);
+      dummy.rotation.copy(c.rotation);
+      const fade = Math.min(1, c.life / (c.maxLife * 0.35));
+      dummy.scale.setScalar(c.scale * fade);
+      dummy.updateMatrix();
+      mesh.setMatrixAt(idx, dummy.matrix);
+      colorScratch.set(c.chipColor);
+      mesh.setColorAt(idx, colorScratch);
+      idx++;
+    }
+    mesh.count = idx;
+    mesh.instanceMatrix.needsUpdate = true;
+    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+  });
+
+  return (
+    <instancedMesh
+      ref={meshRef}
+      args={[geometry, undefined, 96]}
+      frustumCulled={false}
+    >
+      <meshBasicMaterial
+        vertexColors
+        toneMapped={false}
+        side={THREE.DoubleSide}
+        depthWrite={false}
+        transparent
+      />
+    </instancedMesh>
+  );
+}
+
 function activeRockIds(): Set<number> {
   const ids = new Set<number>();
   for (const r of scatterRocks) {
@@ -125,6 +178,7 @@ export default function ChopVfx() {
   const gashGeom = useMemo(() => buildGashGeometry(), []);
   const woodGeom = useMemo(() => new THREE.BoxGeometry(1, 0.55, 0.35), []);
   const stoneGeom = useMemo(() => new THREE.TetrahedronGeometry(0.5, 0), []);
+  const flowerGeom = useMemo(() => new THREE.PlaneGeometry(0.28, 0.28), []);
 
   useFrame((_, dt) => {
     tickChopChips(dt);
@@ -145,8 +199,9 @@ export default function ChopVfx() {
       gashGeom.dispose();
       woodGeom.dispose();
       stoneGeom.dispose();
+      flowerGeom.dispose();
     };
-  }, [gashGeom, stoneGeom, woodGeom]);
+  }, [gashGeom, flowerGeom, stoneGeom, woodGeom]);
 
   const gashes = listGashes();
 
@@ -166,6 +221,7 @@ export default function ChopVfx() {
       ))}
       <ChipBurst material="wood" geometry={woodGeom} color="#7a5a32" />
       <ChipBurst material="stone" geometry={stoneGeom} color="#8a8274" />
+      <FlowerChipBurst geometry={flowerGeom} />
     </group>
   );
 }

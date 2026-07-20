@@ -101,7 +101,7 @@ function generate(): FlowerSpec[] {
         y: heightAt(x, z),
         z,
         rot: rand() * Math.PI * 2,
-        scale: 0.7 + rand() * 0.55,
+        scale: (0.7 + rand() * 0.55) * 2,
         phase: rand(),
         cluster: ci,
       });

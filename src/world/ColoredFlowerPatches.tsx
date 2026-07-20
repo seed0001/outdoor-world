@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useRef } from "react";
+import { useLayoutEffect, useMemo, useRef, useState, useEffect } from "react";
 import * as THREE from "three";
 import { useFrame, useLoader } from "@react-three/fiber";
 import { useTexture } from "@react-three/drei";
@@ -14,6 +14,7 @@ import {
   COLORED_FLOWER_TEXTURE_URLS,
   COLORED_FLOWER_VARIANT_COUNT,
 } from "./coloredFlowerAssets";
+import { worldState } from "../systems/world/worldState";
 
 export { COLORED_FLOWER_TEXTURE_URLS } from "./coloredFlowerAssets";
 
@@ -27,8 +28,12 @@ const TEXTURE_URL_LIST = [...COLORED_FLOWER_TEXTURE_URLS];
  */
 export default function ColoredFlowerPatches() {
   const fbx = useLoader(FBXLoader, FBX_URL);
-  // Stable array ref so useLoader/useTexture cache keys stay consistent across renders.
   const textures = useTexture(TEXTURE_URL_LIST);
+  const [, bumpHarvested] = useState(0);
+
+  useEffect(() => {
+    return worldState.subscribe(() => bumpHarvested((n) => n + 1));
+  }, []);
 
   useLayoutEffect(() => {
     const list = Array.isArray(textures) ? textures : [textures];
@@ -40,18 +45,21 @@ export default function ColoredFlowerPatches() {
 
   return (
     <group>
-      {coloredFlowerPatches.map((spec) => (
-        <OnePatch
-          key={spec.id}
-          spec={spec}
-          template={fbx}
-          diffuse={
-            (Array.isArray(textures) ? textures : [textures])[
-              spec.variant % COLORED_FLOWER_VARIANT_COUNT
-            ]
-          }
-        />
-      ))}
+      {coloredFlowerPatches.map((spec) => {
+        if (worldState.isFlowerHarvested("petal_patch", spec.id)) return null;
+        return (
+          <OnePatch
+            key={spec.id}
+            spec={spec}
+            template={fbx}
+            diffuse={
+              (Array.isArray(textures) ? textures : [textures])[
+                spec.variant % COLORED_FLOWER_VARIANT_COUNT
+              ]
+            }
+          />
+        );
+      })}
     </group>
   );
 }

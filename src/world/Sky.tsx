@@ -101,9 +101,9 @@ export default function Sky() {
         const sunAtten = 1 - THREE.MathUtils.clamp(cloudDarkness * 0.82, 0, 0.94);
         sunInt = baseIntensity * sunAtten;
         // Daytime-only floor so storms in the middle of the day don't wipe
-        // the ground to black. At night we want properly dark.
+        // the ground to black. Keep modest — heavy fill + rain was blowing out.
         if (cloudDarkness > 0.55) {
-          sunInt = Math.max(sunInt, 0.38 * dayFactor);
+          sunInt = Math.max(sunInt, 0.22 * dayFactor);
         }
       }
       sun.intensity = sunInt;
@@ -162,12 +162,25 @@ export default function Sky() {
     // Night falls off completely. The old anti-blackness floors were tied to
     // cloudDarkness regardless of day/night, which kept a pale-pink wash on
     // the ground during thunderstorm nights.
+    const stormReadability = THREE.MathUtils.clamp(
+      (cloudDarkness - 0.42) / 0.55,
+      0,
+      1,
+    );
     if (ambientRef.current) {
       let amb =
         (0.025 + dayFactor * 0.36) *
         (1 - THREE.MathUtils.clamp(cloudDarkness * 0.58, 0, 0.95));
       if (cloudDarkness > 0.5 && dayFactor > 0.08) {
         amb = Math.max(amb, 0.14 * dayFactor + 0.08);
+      }
+      // Heavy storms at night/dusk were crushing terrain to pure black (reads as
+      // “missing ground”). Keep a dim cool fill so walkable mesh stays visible.
+      if (stormReadability > 0) {
+        amb = Math.max(
+          amb,
+          stormReadability * stormReadability * (0.05 + dayFactor * 0.1 + nightFactor * 0.045),
+        );
       }
       ambientRef.current.intensity = amb;
       ambientRef.current.color
@@ -181,6 +194,12 @@ export default function Sky() {
       if (cloudDarkness > 0.5 && dayFactor > 0.08) {
         hemi = Math.max(hemi, 0.18 * dayFactor + 0.06);
       }
+      if (stormReadability > 0) {
+        hemi = Math.max(
+          hemi,
+          stormReadability * stormReadability * (0.07 + dayFactor * 0.14 + nightFactor * 0.05),
+        );
+      }
       hemiRef.current.intensity = hemi;
     }
     if (stormFillRef.current) {
@@ -189,10 +208,10 @@ export default function Sky() {
         0,
         1,
       );
-      // Storm fill only kicks in during the day. At night we want the storm
-      // to read as pitch-dark apart from lightning flashes.
-      stormFillRef.current.intensity =
-        k * k * (0.1 + dayFactor * 0.18) * dayFactor;
+      // Storm fill during the day; at night keep a low floor so terrain doesn't vanish.
+      const dayStorm = k * k * (0.1 + dayFactor * 0.18) * dayFactor;
+      const nightStorm = k * k * (0.035 + nightFactor * 0.05);
+      stormFillRef.current.intensity = dayStorm + nightStorm;
       stormFillRef.current.color.copy(STORM_FOG).lerp(AMBIENT_DAY, dayFactor * 0.35);
     }
 
@@ -213,10 +232,10 @@ export default function Sky() {
       }
       fog.color.copy(workColor);
       const cc = THREE.MathUtils.clamp(cloudCoverage, 0, 1);
-      // Earlier: far = 180 - cc*80 (down to ~100) fully washed out the ground in storms.
-      // Pull near in gently and widen far so mid-field terrain stays readable.
-      fog.near = 50 - cc * 11;
-      fog.far = fog.near + THREE.MathUtils.lerp(130, 145, cc);
+      // Pull fog back during heavy weather so mid-field hills/ground don't read
+      // as a void. Ground mesh ignores fog, but the horizon still looked broken.
+      fog.near = THREE.MathUtils.lerp(52, 68, cc);
+      fog.far = THREE.MathUtils.lerp(195, 255, cc);
     }
   });
 

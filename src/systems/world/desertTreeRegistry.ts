@@ -1,5 +1,11 @@
 import { HALF_X, WORLD_MIN_Z, heightAt, mulberry32 } from "../../world/terrain";
 import {
+  desertTreeClearanceRadius,
+  overlapsAny,
+  rocksToCircles,
+} from "./propSpacing";
+import { rocks } from "./rockRegistry";
+import {
   DESERT_GLB_TREE_PLACEMENT_SEED,
   DESERT_TREE_PLACEMENT_SEED,
 } from "./worldSeed";
@@ -21,6 +27,7 @@ const MIN_DIST_FROM_SPAWN = 10;
 
 function generate(): DesertTreeSpec[] {
   const rand = mulberry32(DESERT_TREE_PLACEMENT_SEED);
+  const rockCircles = rocksToCircles(rocks);
   const out: DesertTreeSpec[] = [];
   let guard = 0;
   while (out.length < DESERT_TREE_COUNT && guard++ < DESERT_TREE_COUNT * 40) {
@@ -30,8 +37,11 @@ function generate(): DesertTreeSpec[] {
       MARGIN +
       rand() * (DESERT_Z_MAX - WORLD_MIN_Z - 2 * MARGIN);
     if (Math.hypot(x, z) < MIN_DIST_FROM_SPAWN) continue;
-    const id = out.length;
     const scale = 0.72 + rand() * 0.55;
+    if (overlapsAny(x, z, desertTreeClearanceRadius(scale), rockCircles)) {
+      continue;
+    }
+    const id = out.length;
     out.push({
       id,
       x,
@@ -50,6 +60,7 @@ const DESERT_GLB_TREE_COUNT = 28;
 
 function generateGlb(): DesertTreeSpec[] {
   const rand = mulberry32(DESERT_GLB_TREE_PLACEMENT_SEED);
+  const rockCircles = rocksToCircles(rocks);
   const out: DesertTreeSpec[] = [];
   let guard = 0;
   while (out.length < DESERT_GLB_TREE_COUNT && guard++ < DESERT_GLB_TREE_COUNT * 40) {
@@ -59,8 +70,11 @@ function generateGlb(): DesertTreeSpec[] {
       MARGIN +
       rand() * (DESERT_Z_MAX - WORLD_MIN_Z - 2 * MARGIN);
     if (Math.hypot(x, z) < MIN_DIST_FROM_SPAWN) continue;
-    const id = out.length;
     const scale = 0.68 + rand() * 0.62;
+    if (overlapsAny(x, z, desertTreeClearanceRadius(scale), rockCircles)) {
+      continue;
+    }
+    const id = out.length;
     out.push({
       id,
       x,

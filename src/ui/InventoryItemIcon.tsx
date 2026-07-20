@@ -162,6 +162,34 @@ function renderIcon(item: InventoryItem) {
           <line x1="11" y1="15" x2="19" y2="19" stroke="#7a5028" strokeWidth="1" />
         </>
       );
+    case "wildflower":
+      return (
+        <>
+          <circle cx="16" cy="14" r="4" fill="#f0a8c8" />
+          <circle cx="12" cy="18" r="3" fill="#f8d878" />
+          <circle cx="20" cy="18" r="3" fill="#e890b0" />
+          <rect x="15" y="18" width="2" height="8" rx="1" fill="#4a7a38" />
+        </>
+      );
+    case "petal_flower":
+      return (
+        <>
+          <circle cx="16" cy="15" r="3.5" fill="#ffe8a0" />
+          <ellipse cx="11" cy="16" rx="4" ry="2.5" fill="#e878b8" transform="rotate(-25 11 16)" />
+          <ellipse cx="21" cy="16" rx="4" ry="2.5" fill="#f0b848" transform="rotate(25 21 16)" />
+          <ellipse cx="16" cy="21" rx="4" ry="2.5" fill="#e85078" />
+          <rect x="15" y="21" width="2" height="6" rx="1" fill="#5a9a40" />
+        </>
+      );
+    case "rose":
+      return (
+        <>
+          <circle cx="16" cy="14" r="5" fill="#d84868" />
+          <circle cx="14" cy="13" r="3" fill="#f07898" />
+          <circle cx="18" cy="13" r="2.5" fill="#c03050" />
+          <rect x="15" y="18" width="2" height="8" rx="1" fill="#3a6a30" />
+        </>
+      );
     default:
       return <rect x="8" y="8" width="16" height="16" rx="2" fill="#666" />;
   }

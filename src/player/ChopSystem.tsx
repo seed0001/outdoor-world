@@ -26,7 +26,13 @@ import {
 import { sturdyFrames } from "../systems/world/sturdyFrames";
 import { insideLake } from "../world/terrain";
 import { playMiningRockSfx, playWoodChopSfx } from "../systems/audio/gameAudio";
-import { reportChopHit } from "../systems/world/chopVfx";
+import { reportChopHit, reportFlowerGatherHit } from "../systems/world/chopVfx";
+import {
+  encodeFlowerKey,
+  flowerGatherWins,
+  flowerInventoryItem,
+  rayPickFlower,
+} from "../systems/world/flowerGather";
 import { rayPickFauna } from "../systems/world/faunaPositions";
 import { killFauna } from "../systems/world/faunaLifecycle";
 const RAY_LEN = 4.2;
@@ -36,6 +42,7 @@ const STANDING_TREE_HITS = 4;
 const FALLEN_TREE_HITS = 4;
 const LOG_HITS = 3;
 const DYNAMIC_ROCK_HITS = 3;
+const FLOWER_HITS = 3;
 
 type HitKind = "tree" | "fallenTree" | "worldLog" | "rock";
 
@@ -85,6 +92,7 @@ export default function ChopSystem() {
   const logChops = useRef(new Map<number, number>());
   const staticRockChops = useRef(new Map<number, number>());
   const dynamicRockChops = useRef(new Map<number, number>());
+  const flowerChops = useRef(new Map<string, number>());
 
   useEffect(() => {
     const down = (e: MouseEvent) => {
@@ -163,6 +171,16 @@ export default function ChopSystem() {
       return;
     }
 
+    const flowerHit = rayPickFlower(
+      o.x,
+      o.y,
+      o.z,
+      dir.current.x,
+      dir.current.y,
+      dir.current.z,
+      RAY_LEN,
+    );
+
     const ray = new rapier.Ray(
       { x: o.x, y: o.y, z: o.z },
       { x: dir.current.x, y: dir.current.y, z: dir.current.z },
@@ -178,6 +196,38 @@ export default function ChopSystem() {
       rb,
       choppablePredicate,
     );
+
+    const flowerWins =
+      flowerHit !== null &&
+      flowerGatherWins(flowerHit, hit ? hit.timeOfImpact : null);
+
+    if (flowerWins && flowerHit) {
+      if (worldState.isFlowerHarvested(flowerHit.kind, flowerHit.id)) return;
+      const key = encodeFlowerKey(flowerHit.kind, flowerHit.id);
+      const n = (flowerChops.current.get(key) ?? 0) + 1;
+      flowerChops.current.set(key, n);
+      playerRef.axeSwing = 1;
+      addCameraShake(0.05);
+      playWoodChopSfx();
+      hitPoint.current.set(
+        flowerHit.position.x,
+        flowerHit.position.y,
+        flowerHit.position.z,
+      );
+      reportFlowerGatherHit({
+        position: hitPoint.current,
+        direction: dir.current,
+        chipColors: flowerHit.chipColors,
+        hitIndex: n,
+        maxHits: FLOWER_HITS,
+      });
+      if (n >= FLOWER_HITS) {
+        flowerChops.current.delete(key);
+        worldState.harvestFlower(flowerHit.kind, flowerHit.id);
+        inventory.add(flowerInventoryItem(flowerHit.kind), 1);
+      }
+      return;
+    }
 
     playerRef.axeSwing = 1;
     addCameraShake(0.08);

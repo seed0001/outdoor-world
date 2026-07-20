@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useMemo, useRef } from "react";
 import * as THREE from "three";
 import { useFrame, useLoader } from "@react-three/fiber";
 import { FBXLoader, mergeBufferGeometries } from "three-stdlib";
@@ -6,6 +6,7 @@ import { flowers } from "../systems/world/flowerRegistry";
 import { snapshot } from "../systems/world/worldClock";
 import { getWeather } from "../systems/weather/weatherSystem";
 import { foliageLevel } from "../systems/world/calendar";
+import { worldState } from "../systems/world/worldState";
 
 const FBX_URL = "/models/flower/Flower.fbx";
 const DIFFUSE_URL = "/models/flower/Textur Diffuse.png";
@@ -162,25 +163,7 @@ transformed.y -= bend * windMag * 0.02 * (1.0 + wave * 0.5);
 
   // Build the instance matrices once.
   const instRef = useRef<THREE.InstancedMesh>(null);
-  useEffect(() => {
-    const mesh = instRef.current;
-    if (!mesh) return;
-    const dummy = new THREE.Object3D();
-    for (let i = 0; i < flowers.length; i++) {
-      const f = flowers[i];
-      dummy.position.set(f.x, f.y, f.z);
-      dummy.rotation.set(0, f.rot, 0);
-      dummy.scale.setScalar(f.scale);
-      dummy.updateMatrix();
-      mesh.setMatrixAt(i, dummy.matrix);
-    }
-    mesh.instanceMatrix.needsUpdate = true;
-    mesh.count = flowers.length;
-    mesh.computeBoundingSphere();
-  }, [geometry]);
-
-  // Per-frame: wind direction rotates with time; magnitude from weather.
-  // Root group scales with the seasonal bloom level so winter hides them.
+  const dummyRef = useRef(new THREE.Object3D());
   const rootRef = useRef<THREE.Group>(null);
   const bloomRef = useRef(0);
 
@@ -189,7 +172,6 @@ transformed.y -= bend * windMag * 0.02 * (1.0 + wave * 0.5);
 
     const weather = getWeather();
     const wind = weather.windStrength;
-    // Rotate the prevailing wind direction slowly so gusts feel organic.
     const t = uniforms.uTime.value;
     const angle = t * 0.12;
     uniforms.uWind.value.set(
@@ -199,14 +181,26 @@ transformed.y -= bend * windMag * 0.02 * (1.0 + wave * 0.5);
 
     const world = snapshot();
     const target = foliageLevel(world.yearFrac);
-    // Smooth the bloom so it doesn't pop when the day ticks over between
-    // foliageLevel plateaus.
     bloomRef.current += (target - bloomRef.current) * Math.min(1, dt * 0.6);
     const s = bloomRef.current;
     if (rootRef.current) {
       rootRef.current.visible = s > 0.01;
       rootRef.current.scale.setScalar(s);
     }
+
+    const mesh = instRef.current;
+    if (!mesh) return;
+    const dummy = dummyRef.current;
+    for (let i = 0; i < flowers.length; i++) {
+      const f = flowers[i];
+      const hidden = worldState.isFlowerHarvested("wildflower", f.id);
+      dummy.position.set(f.x, f.y, f.z);
+      dummy.rotation.set(0, f.rot, 0);
+      dummy.scale.setScalar(hidden ? 0 : f.scale);
+      dummy.updateMatrix();
+      mesh.setMatrixAt(i, dummy.matrix);
+    }
+    mesh.instanceMatrix.needsUpdate = true;
   });
 
   return (

@@ -15,6 +15,9 @@ export const BACKPACK_ITEMS: BackpackItemSlot[] = [
   { item: "wood", title: "Wood" },
   { item: "stone", title: "Stone" },
   { item: "arrow", title: "Arrows" },
+  { item: "wildflower", title: "Daisies" },
+  { item: "petal_flower", title: "Petal flowers" },
+  { item: "rose", title: "Roses" },
   { item: "sturdy_frame", title: "Sturdy shelter kit (B to place)" },
   ...MINERAL_INVENTORY_KEYS.map((item, i) => ({
     item,

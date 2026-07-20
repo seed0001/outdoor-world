@@ -57,11 +57,14 @@ export default function Hail() {
         uniform float uBoxH;
         uniform float uWindX;
         uniform float uPixelRatio;
+        varying float vGroundFade;
         void main() {
           vec3 p = position;
           float fall = mod(p.y - uTime * aSpeed + aSeed, uBoxH);
-          p.y = fall - uBoxH * 0.5;
-          p.x += uWindX * (uBoxH * 0.5 - p.y) * 0.08;
+          float boxHalf = uBoxH * 0.5;
+          p.y = fall - boxHalf;
+          p.x += uWindX * (boxHalf - p.y) * 0.08;
+          vGroundFade = smoothstep(-boxHalf + 1.0, -boxHalf + 9.0, p.y);
           vec4 mv = modelViewMatrix * vec4(p, 1.0);
           gl_Position = projectionMatrix * mv;
           gl_PointSize = aSize * 800.0 * uPixelRatio / -mv.z;
@@ -69,13 +72,16 @@ export default function Hail() {
       `,
       fragmentShader: `
         uniform float uIntensity;
+        varying float vGroundFade;
         void main() {
           vec2 uv = gl_PointCoord - 0.5;
           float d = length(uv);
           float mask = smoothstep(0.5, 0.15, d);
           if (mask < 0.02) discard;
+          float a = mask * uIntensity * 0.65 * vGroundFade;
+          if (a < 0.01) discard;
           vec3 col = mix(vec3(0.82, 0.88, 0.95), vec3(1.0), 1.0 - d*2.0);
-          gl_FragColor = vec4(col, mask * uIntensity);
+          gl_FragColor = vec4(col, a);
         }
       `,
     });

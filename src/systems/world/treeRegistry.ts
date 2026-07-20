@@ -7,6 +7,12 @@ import {
   mulberry32,
 } from "../../world/terrain";
 import { nearSnakeDen } from "./snakeDen";
+import {
+  overlapsAny,
+  rocksToCircles,
+  treeClearanceRadius,
+} from "./propSpacing";
+import { rocks } from "./rockRegistry";
 import { TREE_PLACEMENT_SEED } from "./worldSeed";
 
 /**
@@ -78,6 +84,7 @@ const LAKE_SHORE_BUFFER = 1.8;
 
 function generate(): TreeSpec[] {
   const rand = mulberry32(TREE_PLACEMENT_SEED);
+  const rockCircles = rocksToCircles(rocks);
   const out: TreeSpec[] = [];
   let guard = 0;
   while (out.length < TREE_COUNT && guard++ < TREE_COUNT * 30) {
@@ -102,6 +109,16 @@ function generate(): TreeSpec[] {
       foliageRadius: baseFoliageR,
       trunkRadius: baseTrunkR,
     });
+    if (
+      overlapsAny(
+        x,
+        z,
+        treeClearanceRadius(shaped.foliageRadius, shaped.trunkRadius),
+        rockCircles,
+      )
+    ) {
+      continue;
+    }
     out.push({
       id,
       kind,

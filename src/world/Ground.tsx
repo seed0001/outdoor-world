@@ -95,6 +95,7 @@ export default function Ground() {
         geometry={geometry}
         material={material}
         receiveShadow
+        frustumCulled={false}
       />
     </RigidBody>
   );

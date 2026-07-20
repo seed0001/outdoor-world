@@ -2,6 +2,8 @@ import * as THREE from "three";
 import type { TreeKind } from "./treeRegistry";
 import type { MineralKind } from "./mineralRegistry";
 
+export type FlowerGatherKind = "wildflower" | "petal_patch" | "rose";
+
 export interface WorldStateSaveData {
   fallenTrees: FallenTreePayload[];
   displacedRocks: DisplacedRockPayload[];
@@ -10,6 +12,8 @@ export interface WorldStateSaveData {
   placedLogs: PlacedLogPayload[];
   stonePickups: StonePickupPayload[];
   arrowPickups: ArrowPickupPayload[];
+  /** `kind:id` keys — see flowerGather.ts */
+  harvestedFlowers: string[];
   nextLogId: number;
   nextPickupId: number;
   nextArrowPickupId: number;
@@ -71,6 +75,7 @@ const treesHarvestedToLog = new Set<number>();
 const placedLogs = new Map<number, PlacedLogPayload>();
 const stonePickups = new Map<number, StonePickupPayload>();
 const arrowPickups = new Map<number, ArrowPickupPayload>();
+const harvestedFlowers = new Set<string>();
 let nextLogId = 1;
 let nextPickupId = 1;
 let nextArrowPickupId = 1;
@@ -161,6 +166,18 @@ export const worldState = {
     if (!arrowPickups.delete(id)) return;
     emit();
   },
+  harvestFlower(kind: FlowerGatherKind, id: number) {
+    const key = `${kind}:${id}`;
+    if (harvestedFlowers.has(key)) return;
+    harvestedFlowers.add(key);
+    emit();
+  },
+  isFlowerHarvested(kind: FlowerGatherKind, id: number) {
+    return harvestedFlowers.has(`${kind}:${id}`);
+  },
+  listHarvestedFlowers(): string[] {
+    return Array.from(harvestedFlowers);
+  },
   removeDisplacedRock(rockId: number) {
     if (!displacedRocks.delete(rockId)) return;
     emit();
@@ -213,6 +230,7 @@ export const worldState = {
     placedLogs.clear();
     stonePickups.clear();
     arrowPickups.clear();
+    harvestedFlowers.clear();
     nextLogId = 1;
     nextPickupId = 1;
     nextArrowPickupId = 1;
@@ -227,6 +245,7 @@ export const worldState = {
       placedLogs: Array.from(placedLogs.values()),
       stonePickups: Array.from(stonePickups.values()),
       arrowPickups: Array.from(arrowPickups.values()),
+      harvestedFlowers: Array.from(harvestedFlowers),
       nextLogId,
       nextPickupId,
       nextArrowPickupId,
@@ -240,6 +259,7 @@ export const worldState = {
     placedLogs.clear();
     stonePickups.clear();
     arrowPickups.clear();
+    harvestedFlowers.clear();
     for (const p of data.fallenTrees) fallenTrees.set(p.id, p);
     for (const p of data.displacedRocks) displacedRocks.set(p.id, p);
     for (const id of data.minedRocks ?? []) minedRocks.add(id);
@@ -247,6 +267,7 @@ export const worldState = {
     for (const p of data.placedLogs) placedLogs.set(p.id, p);
     for (const p of data.stonePickups) stonePickups.set(p.id, p);
     for (const p of data.arrowPickups) arrowPickups.set(p.id, p);
+    for (const key of data.harvestedFlowers ?? []) harvestedFlowers.add(key);
     nextLogId = data.nextLogId;
     nextPickupId = data.nextPickupId;
     nextArrowPickupId = data.nextArrowPickupId;

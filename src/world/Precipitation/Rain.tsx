@@ -55,12 +55,17 @@ export default function Rain() {
         uniform float uSize;
         uniform float uPixelRatio;
         varying float vAlpha;
+        varying float vGroundFade;
         void main() {
           vec3 p = position;
           float fall = mod(p.y - uTime * aSpeed + aSeed, uBoxH);
-          p.y = fall - uBoxH * 0.5;
-          p.x += uWindX * (uBoxH * 0.5 - p.y) * 0.25;
-          p.z += uWindZ * (uBoxH * 0.5 - p.y) * 0.25;
+          float boxHalf = uBoxH * 0.5;
+          p.y = fall - boxHalf;
+          p.x += uWindX * (boxHalf - p.y) * 0.25;
+          p.z += uWindZ * (boxHalf - p.y) * 0.25;
+          // Fade streaks near the ground — dense rain with depthWrite off was
+          // washing the terrain to a flat white sheet during thunderstorms.
+          vGroundFade = smoothstep(-boxHalf + 1.0, -boxHalf + 9.0, p.y);
           vec4 mv = modelViewMatrix * vec4(p, 1.0);
           gl_Position = projectionMatrix * mv;
           gl_PointSize = uSize * uPixelRatio * (12.0 / -mv.z);
@@ -70,13 +75,16 @@ export default function Rain() {
       fragmentShader: `
         uniform float uIntensity;
         varying float vAlpha;
+        varying float vGroundFade;
         void main() {
           vec2 uv = gl_PointCoord - 0.5;
           float dx = smoothstep(0.08, 0.0, abs(uv.x));
           float dy = smoothstep(0.5, 0.1, abs(uv.y));
           float mask = dx * dy;
           if (mask < 0.02) discard;
-          gl_FragColor = vec4(vec3(0.70, 0.82, 1.0), mask * uIntensity * 0.5);
+          float a = mask * uIntensity * 0.22 * vGroundFade;
+          if (a < 0.01) discard;
+          gl_FragColor = vec4(vec3(0.55, 0.66, 0.82), a);
         }
       `,
     });

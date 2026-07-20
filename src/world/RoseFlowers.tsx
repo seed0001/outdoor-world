@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useRef } from "react";
+import { useLayoutEffect, useMemo, useRef, useState, useEffect } from "react";
 import * as THREE from "three";
 import { useFrame, useLoader } from "@react-three/fiber";
 import { useTexture } from "@react-three/drei";
@@ -7,6 +7,7 @@ import { SkeletonUtils } from "three-stdlib";
 import { roseFlowers, type RoseFlowerSpec } from "../systems/world/roseFlowerRegistry";
 import { snapshot } from "../systems/world/worldClock";
 import { butterflyActivity, foliageLevel } from "../systems/world/calendar";
+import { worldState } from "../systems/world/worldState";
 
 const FBX_URL = "/models/rose-flower/SM_Rosaceae.fbx";
 
@@ -24,6 +25,12 @@ const ROSE_TEX_LIST = [...ROSE_TEXTURE_URLS];
 export default function RoseFlowers() {
   const fbx = useLoader(FBXLoader, FBX_URL);
   const textures = useTexture(ROSE_TEX_LIST);
+  const [, bumpHarvested] = useState(0);
+
+  useEffect(() => {
+    return worldState.subscribe(() => bumpHarvested((n) => n + 1));
+  }, []);
+
   const map = (Array.isArray(textures) ? textures : [textures])[0] as THREE.Texture;
   const normalMap = (Array.isArray(textures) ? textures : [textures])[1] as
     | THREE.Texture
@@ -40,15 +47,18 @@ export default function RoseFlowers() {
 
   return (
     <group>
-      {roseFlowers.map((spec) => (
-        <OneRose
-          key={spec.id}
-          spec={spec}
-          template={fbx}
-          map={map}
-          normalMap={normalMap}
-        />
-      ))}
+      {roseFlowers.map((spec) => {
+        if (worldState.isFlowerHarvested("rose", spec.id)) return null;
+        return (
+          <OneRose
+            key={spec.id}
+            spec={spec}
+            template={fbx}
+            map={map}
+            normalMap={normalMap}
+          />
+        );
+      })}
     </group>
   );
 }

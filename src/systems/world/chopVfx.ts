@@ -2,7 +2,7 @@ import * as THREE from "three";
 
 export type ChopTargetKind = "tree" | "fallenTree" | "worldLog" | "rock";
 
-export type StrikeMaterial = "wood" | "stone";
+export type StrikeMaterial = "wood" | "stone" | "flower";
 
 export type ChopGash = {
   id: number;
@@ -25,6 +25,7 @@ export type WoodChipParticle = {
   scale: number;
   life: number;
   maxLife: number;
+  chipColor: string;
 };
 
 const WOOD_CHIP_COLORS = ["#6b4a2a", "#8b6a3a", "#5c3a1a", "#a08050", "#4a3018"];
@@ -79,6 +80,7 @@ function allocChip(): WoodChipParticle | null {
     scale: 1,
     life: 0,
     maxLife: 1,
+    chipColor: "#ffffff",
   };
   chips.push(c);
   return c;
@@ -89,6 +91,7 @@ function spawnChips(
   normal: THREE.Vector3,
   count: number,
   material: StrikeMaterial,
+  palette?: readonly string[],
 ) {
   for (let i = 0; i < count; i++) {
     const slot = allocChip();
@@ -99,8 +102,10 @@ function spawnChips(
       .add(normal)
       .normalize();
 
-    const speed =
-      material === "stone"
+    const isFlower = material === "flower";
+    const speed = isFlower
+      ? 1.6 + Math.random() * 3.2
+      : material === "stone"
         ? 2.8 + Math.random() * 4.8
         : 2.2 + Math.random() * 4.2;
     slot.active = true;
@@ -108,21 +113,31 @@ function spawnChips(
     slot.position.copy(hitPoint).addScaledVector(normal, 0.03 + Math.random() * 0.02);
     slot.velocity.copy(_scratch).multiplyScalar(speed);
     slot.angularVel.set(
-      (Math.random() - 0.5) * (material === "stone" ? 18 : 14),
-      (Math.random() - 0.5) * (material === "stone" ? 18 : 14),
-      (Math.random() - 0.5) * (material === "stone" ? 18 : 14),
+      (Math.random() - 0.5) * (isFlower ? 22 : material === "stone" ? 18 : 14),
+      (Math.random() - 0.5) * (isFlower ? 22 : material === "stone" ? 18 : 14),
+      (Math.random() - 0.5) * (isFlower ? 22 : material === "stone" ? 18 : 14),
     );
     slot.rotation.set(
       Math.random() * Math.PI,
       Math.random() * Math.PI,
       Math.random() * Math.PI,
     );
-    slot.scale =
-      material === "stone"
+    slot.scale = isFlower
+      ? 0.09 + Math.random() * 0.12
+      : material === "stone"
         ? 0.02 + Math.random() * 0.04
         : 0.025 + Math.random() * 0.045;
-    slot.maxLife = material === "stone" ? 0.35 + Math.random() * 0.4 : 0.4 + Math.random() * 0.45;
+    slot.maxLife = isFlower
+      ? 0.55 + Math.random() * 0.45
+      : material === "stone"
+        ? 0.35 + Math.random() * 0.4
+        : 0.4 + Math.random() * 0.45;
     slot.life = slot.maxLife;
+    if (isFlower && palette && palette.length > 0) {
+      slot.chipColor = palette[Math.floor(Math.random() * palette.length)];
+    } else {
+      slot.chipColor = chipColor(material, i);
+    }
   }
 }
 
@@ -185,6 +200,24 @@ export function reportChopHit(payload: {
     });
   }
 
+  emit();
+}
+
+/** Petal burst when gathering flowers — no slash gashes. */
+export function reportFlowerGatherHit(payload: {
+  position: THREE.Vector3;
+  direction: THREE.Vector3;
+  chipColors: readonly string[];
+  hitIndex: number;
+  maxHits: number;
+}): void {
+  const progress = payload.hitIndex / payload.maxHits;
+  _normal.copy(payload.direction).normalize().negate();
+  const count = Math.max(
+    4,
+    Math.floor((8 + Math.random() * 8) * (0.35 + progress * 0.85)),
+  );
+  spawnChips(payload.position, _normal, count, "flower", payload.chipColors);
   emit();
 }
 
@@ -262,6 +295,7 @@ export function subscribeChopVfx(cb: () => void): () => void {
 }
 
 export function chipColor(material: StrikeMaterial, index: number): string {
+  if (material === "flower") return "#f0a0c0";
   const palette = material === "stone" ? STONE_CHIP_COLORS : WOOD_CHIP_COLORS;
   return palette[index % palette.length];
 }
