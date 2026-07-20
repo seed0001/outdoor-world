@@ -7,7 +7,7 @@ import {
   useRapier,
   type RapierRigidBody,
 } from "@react-three/rapier";
-import { heightAt, LAKE_WATER_Y, submergedInLake } from "../world/terrain";
+import { heightAt, submergedInLake } from "../world/terrain";
 import { useXR } from "@react-three/xr";
 import { usePlayerControlsGetter } from "./usePlayerControls";
 import { playerRef } from "../systems/player/playerRef";
