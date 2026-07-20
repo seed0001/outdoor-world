@@ -1,7 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { BallCollider, RigidBody, type RapierRigidBody } from "@react-three/rapier";
-import { rocks as rockList, type RockSpec } from "../systems/world/rockRegistry";
+import {
+  formationRocks,
+  scatterRocks,
+  type RockSpec,
+} from "../systems/world/rockRegistry";
 import { mineralSampleColor } from "../systems/world/mineralRegistry";
 import { worldState, type DisplacedRockPayload } from "../systems/world/worldState";
 
@@ -13,7 +17,7 @@ function rockMeshColor(spec: RockSpec): string {
     (135 * s) / 255,
   );
   const tint = new THREE.Color(mineralSampleColor(spec.mineralVein));
-  base.lerp(tint, 0.2);
+  base.lerp(tint, spec.role === "formation" ? 0.1 : 0.2);
   return `#${base.getHexString()}`;
 }
 
@@ -37,10 +41,13 @@ export default function Rocks() {
 
   return (
     <group>
-      {rockList.map((r) => {
+      {scatterRocks.map((r) => {
         if (displacedIds.has(r.id) || minedIds.has(r.id)) return null;
-        return <StaticRock key={`static-${r.id}`} spec={r} />;
+        return <ScatterRock key={`scatter-${r.id}`} spec={r} />;
       })}
+      {formationRocks.map((r) => (
+        <FormationRock key={`formation-${r.id}`} spec={r} />
+      ))}
       {displacedPayloads.map((p) => (
         <DynamicRock key={`dyn-${p.id}`} payload={p} />
       ))}
@@ -48,7 +55,7 @@ export default function Rocks() {
   );
 }
 
-function StaticRock({ spec }: { spec: RockSpec }) {
+function ScatterRock({ spec }: { spec: RockSpec }) {
   const radius = spec.scale;
   const color = rockMeshColor(spec);
   return (
@@ -57,9 +64,10 @@ function StaticRock({ spec }: { spec: RockSpec }) {
       colliders={false}
       position={[spec.x, spec.y + radius * 0.4, spec.z]}
       rotation={[spec.rx, spec.ry, spec.rz]}
+      friction={1}
       userData={{ kind: "rock", id: spec.id }}
     >
-      <BallCollider args={[radius * 0.8]} />
+      <BallCollider args={[radius * 0.92]} />
       <mesh castShadow receiveShadow>
         <icosahedronGeometry args={[radius, 0]} />
         <meshStandardMaterial color={color} roughness={1} flatShading />
@@ -68,8 +76,29 @@ function StaticRock({ spec }: { spec: RockSpec }) {
   );
 }
 
+function FormationRock({ spec }: { spec: RockSpec }) {
+  const radius = spec.scale;
+  const color = rockMeshColor(spec);
+  return (
+    <RigidBody
+      type="fixed"
+      colliders={false}
+      position={[spec.x, spec.y + radius * 0.38, spec.z]}
+      rotation={[spec.rx, spec.ry, spec.rz]}
+      friction={1.1}
+      userData={{ kind: "formationRock", id: spec.id }}
+    >
+      <BallCollider args={[radius * 0.98]} />
+      <mesh castShadow receiveShadow>
+        <icosahedronGeometry args={[radius, 1]} />
+        <meshStandardMaterial color={color} roughness={1} flatShading />
+      </mesh>
+    </RigidBody>
+  );
+}
+
 function DynamicRock({ payload }: { payload: DisplacedRockPayload }) {
-  const spec = rockList.find((r) => r.id === payload.id);
+  const spec = scatterRocks.find((r) => r.id === payload.id);
   const bodyRef = useRef<RapierRigidBody>(null);
   const appliedRef = useRef(false);
   useEffect(() => {
@@ -103,9 +132,10 @@ function DynamicRock({ payload }: { payload: DisplacedRockPayload }) {
       position={payload.position}
       linearDamping={0.4}
       angularDamping={0.4}
+      friction={1}
       userData={{ kind: "rock", id: payload.id }}
     >
-      <BallCollider args={[radius * 0.8]} />
+      <BallCollider args={[radius * 0.92]} />
       <mesh castShadow receiveShadow>
         <icosahedronGeometry args={[radius, 0]} />
         <meshStandardMaterial color={color} roughness={1} flatShading />

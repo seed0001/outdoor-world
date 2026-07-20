@@ -196,7 +196,7 @@ export default function Player() {
       canSleep={false}
       mass={1}
       linearDamping={0.15}
-      friction={0}
+      friction={1}
       restitution={0}
       ccd
     >

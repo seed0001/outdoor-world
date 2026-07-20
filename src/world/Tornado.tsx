@@ -7,7 +7,7 @@ import { playerRef, addCameraShake } from "../systems/player/playerRef";
 import { onCommand } from "../systems/world/commands";
 import { worldState } from "../systems/world/worldState";
 import { trees as treeList } from "../systems/world/treeRegistry";
-import { rocks as rockList } from "../systems/world/rockRegistry";
+import { scatterRocks as rockList } from "../systems/world/rockRegistry";
 import { HALF_X, heightAt } from "./terrain";
 
 const FUNNEL_RINGS = 40;

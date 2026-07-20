@@ -9,10 +9,31 @@ import {
   tickChopChips,
   type StrikeMaterial,
 } from "../systems/world/chopVfx";
-import { rocks as rockList } from "../systems/world/rockRegistry";
+import { scatterRocks } from "../systems/world/rockRegistry";
 import { worldState } from "../systems/world/worldState";
 
+/** Lens-shaped slash: pointed ends along local X, shallow depth along Z. */
+function buildGashGeometry(): THREE.ExtrudeGeometry {
+  const shape = new THREE.Shape();
+  const L = 1;
+  const W = 0.34;
+  shape.moveTo(-L, 0);
+  shape.quadraticCurveTo(-L * 0.28, W, 0, W * 0.92);
+  shape.quadraticCurveTo(L * 0.28, W, L, 0);
+  shape.quadraticCurveTo(L * 0.28, -W, 0, -W * 0.92);
+  shape.quadraticCurveTo(-L * 0.28, -W, -L, 0);
+  const geom = new THREE.ExtrudeGeometry(shape, {
+    depth: 0.14,
+    bevelEnabled: false,
+    curveSegments: 10,
+    steps: 1,
+  });
+  geom.translate(0, 0, -0.07);
+  return geom;
+}
+
 function GashMark({
+  geometry,
   position,
   quaternion,
   width,
@@ -20,6 +41,7 @@ function GashMark({
   depth,
   material,
 }: {
+  geometry: THREE.ExtrudeGeometry;
   position: THREE.Vector3;
   quaternion: THREE.Quaternion;
   width: number;
@@ -31,18 +53,19 @@ function GashMark({
     <mesh
       position={position}
       quaternion={quaternion}
+      scale={[width * 0.5, height, depth / 0.14]}
       renderOrder={2}
       castShadow={false}
       receiveShadow
     >
-      <boxGeometry args={[width, height, depth]} />
+      <primitive object={geometry} attach="geometry" />
       <meshStandardMaterial
-        color={material === "stone" ? "#2e2c28" : "#1a0f08"}
-        roughness={1}
-        metalness={material === "stone" ? 0.08 : 0}
+        color={material === "stone" ? "#b5aea4" : "#c4a574"}
+        roughness={0.96}
+        metalness={0}
         polygonOffset
-        polygonOffsetFactor={-3}
-        polygonOffsetUnits={-3}
+        polygonOffsetFactor={-2}
+        polygonOffsetUnits={-2}
       />
     </mesh>
   );
@@ -88,7 +111,7 @@ function ChipBurst({
 
 function activeRockIds(): Set<number> {
   const ids = new Set<number>();
-  for (const r of rockList) {
+  for (const r of scatterRocks) {
     if (!worldState.isRockDisplaced(r.id) && !worldState.isRockMined(r.id)) {
       ids.add(r.id);
     }
@@ -99,6 +122,7 @@ function activeRockIds(): Set<number> {
 
 export default function ChopVfx() {
   const [, setGashRevision] = useState(0);
+  const gashGeom = useMemo(() => buildGashGeometry(), []);
   const woodGeom = useMemo(() => new THREE.BoxGeometry(1, 0.55, 0.35), []);
   const stoneGeom = useMemo(() => new THREE.TetrahedronGeometry(0.5, 0), []);
 
@@ -118,10 +142,11 @@ export default function ChopVfx() {
     return () => {
       unsubVfx();
       unsubWorld();
+      gashGeom.dispose();
       woodGeom.dispose();
       stoneGeom.dispose();
     };
-  }, [stoneGeom, woodGeom]);
+  }, [gashGeom, stoneGeom, woodGeom]);
 
   const gashes = listGashes();
 
@@ -130,6 +155,7 @@ export default function ChopVfx() {
       {gashes.map((g) => (
         <GashMark
           key={g.id}
+          geometry={gashGeom}
           position={g.position}
           quaternion={g.quaternion}
           width={g.width}

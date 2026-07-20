@@ -11,7 +11,11 @@ import { worldState } from "../systems/world/worldState";
 import { computeWoodHarvestTraits } from "../systems/world/woodEcology";
 import { trees as treeList } from "../systems/world/treeRegistry";
 import { getWeather } from "../systems/weather/weatherSystem";
-import { rocks as rockList, type RockSpec } from "../systems/world/rockRegistry";
+import {
+  scatterRocks as rockList,
+  scatterRockMineHits,
+  type RockSpec,
+} from "../systems/world/rockRegistry";
 import { mineralKindToKey } from "../systems/world/mineralRegistry";
 import { isBackpackOpen } from "../systems/ui/backpackState";
 import {
@@ -31,22 +35,24 @@ const STURDY_PLACE_COOLDOWN = 0.42;
 const STANDING_TREE_HITS = 4;
 const FALLEN_TREE_HITS = 4;
 const LOG_HITS = 3;
-const BIG_STATIC_ROCK = 0.68;
-const STATIC_ROCK_HITS = 4;
 const DYNAMIC_ROCK_HITS = 3;
 
 type HitKind = "tree" | "fallenTree" | "worldLog" | "rock";
 
-/** Stone + optional vein ore go straight into {@link inventory} (same totals as old ground pickups). */
-function grantRockBreakLoot(spec: RockSpec | undefined, phase: "dislodge" | "smash") {
-  const stone =
-    phase === "dislodge"
-      ? 7 + Math.floor(Math.random() * 8)
-      : 5 + Math.floor(Math.random() * 7);
+/** Stone + optional vein ore scaled to rock size. */
+function grantRockBreakLoot(spec: RockSpec | undefined) {
+  const t = spec ? Math.min(1.2, spec.scale / 0.9) : 1;
+  const stone = Math.max(
+    2,
+    Math.floor((5 + Math.random() * 7) * (0.35 + t * 0.65)),
+  );
   inventory.add("stone", stone);
   if (spec !== undefined) {
-    const ore =
-      2 + Math.floor(Math.random() * 3) + (Math.random() < 0.35 ? 1 : 0);
+    const ore = Math.max(
+      1,
+      Math.floor((2 + Math.random() * 3) * (0.4 + t * 0.6)) +
+        (Math.random() < 0.25 * t ? 1 : 0),
+    );
     inventory.add(mineralKindToKey(spec.mineralVein), ore);
   }
 }
@@ -294,7 +300,8 @@ export default function ChopSystem() {
       const spec = rockList.find((r) => r.id === rockId);
       const isDisplaced = worldState.isRockDisplaced(rockId);
 
-      if (!isDisplaced && spec && spec.scale >= BIG_STATIC_ROCK) {
+      if (!isDisplaced && spec) {
+        const maxHits = scatterRockMineHits(spec.scale);
         const n = (staticRockChops.current.get(rockId) ?? 0) + 1;
         staticRockChops.current.set(rockId, n);
         playMiningRockSfx();
@@ -304,14 +311,13 @@ export default function ChopSystem() {
           position: hitPoint.current,
           direction: dir.current,
           hitIndex: n,
-          maxHits: STATIC_ROCK_HITS,
+          maxHits,
         });
         addCameraShake(0.09);
-        if (n >= STATIC_ROCK_HITS) {
+        if (n >= maxHits) {
           staticRockChops.current.delete(rockId);
           worldState.destroyRock(rockId);
-          grantRockBreakLoot(spec, "dislodge");
-          grantRockBreakLoot(spec, "smash");
+          grantRockBreakLoot(spec);
         }
         return;
       }
@@ -338,7 +344,7 @@ export default function ChopSystem() {
         if (n >= DYNAMIC_ROCK_HITS) {
           dynamicRockChops.current.delete(rockId);
           worldState.removeDisplacedRock(rockId);
-          grantRockBreakLoot(spec, "smash");
+          grantRockBreakLoot(spec);
         }
       }
     }

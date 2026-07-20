@@ -144,16 +144,28 @@ export function reportChopHit(payload: {
   const progress = payload.hitIndex / payload.maxHits;
   const width =
     material === "stone"
-      ? 0.12 + progress * 0.16 + Math.random() * 0.05
-      : 0.18 + progress * 0.22 + Math.random() * 0.06;
-  const height = material === "stone" ? 0.05 + progress * 0.03 : 0.06 + progress * 0.04;
-  const depth = material === "stone" ? 0.022 + progress * 0.01 : 0.018 + progress * 0.012;
+      ? 0.11 + progress * 0.13 + Math.random() * 0.04
+      : 0.06 + progress * 0.08 + Math.random() * 0.03;
+  const height = material === "stone" ? 0.04 + progress * 0.022 : 0.032 + progress * 0.018;
+  const depth = material === "stone" ? 0.012 + progress * 0.006 : 0.006 + progress * 0.003;
+
+  // Stone marks sit slightly proud of the surface so they aren't buried in the mesh.
+  const surfaceOffset =
+    material === "stone"
+      ? 0.02 + progress * 0.01
+      : -payload.direction.lengthSq() > 0
+        ? -0.004
+        : 0;
+  const offsetDir =
+    material === "stone"
+      ? _normal
+      : payload.direction.clone().normalize();
 
   gashes.push({
     id: nextGashId++,
     targetKey: targetKey(payload.kind, payload.targetId),
     material,
-    position: payload.position.clone().addScaledVector(_normal, 0.015),
+    position: payload.position.clone().addScaledVector(offsetDir, surfaceOffset),
     quaternion: buildGashQuaternion(_normal),
     width,
     height,
