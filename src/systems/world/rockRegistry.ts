@@ -32,7 +32,7 @@ export interface RockSpec {
 }
 
 const SCATTER_ROCK_COUNT = 45;
-const FORMATION_CLUSTER_COUNT = 24;
+const FORMATION_CLUSTER_COUNT = 12;
 const MIN_DIST_FROM_SPAWN = 4;
 const SCATTER_SEED = 7332;
 const FORMATION_SEED = 9912;
@@ -41,10 +41,10 @@ export const FORMATION_ROCK_ID_BASE = 1000;
 
 /** Size tiers from current “large” up through three bigger classes. */
 const FORMATION_SIZE_TIERS = [
-  { scaleMin: 0.925, scaleRange: 1.175, boulders: [4, 7] as const, spread: 2.6, lakePad: 10, spacing: 26 },
-  { scaleMin: 1.275, scaleRange: 1.475, boulders: [6, 10] as const, spread: 3.4, lakePad: 14, spacing: 34 },
-  { scaleMin: 1.725, scaleRange: 1.775, boulders: [8, 12] as const, spread: 4.4, lakePad: 18, spacing: 42 },
-  { scaleMin: 2.3, scaleRange: 2.2, boulders: [10, 15] as const, spread: 5.6, lakePad: 24, spacing: 52 },
+  { scaleMin: 0.45, scaleRange: 0.55, boulders: [2, 4] as const, spread: 1.6, lakePad: 10, spacing: 26 },
+  { scaleMin: 0.65, scaleRange: 0.65, boulders: [3, 5] as const, spread: 2.0, lakePad: 14, spacing: 34 },
+  { scaleMin: 0.85, scaleRange: 0.75, boulders: [4, 7] as const, spread: 2.6, lakePad: 18, spacing: 42 },
+  { scaleMin: 1.1, scaleRange: 0.9, boulders: [5, 9] as const, spread: 3.3, lakePad: 24, spacing: 52 },
 ] as const;
 
 function randomFormationColor(rand: () => number): FormationRockColor {
